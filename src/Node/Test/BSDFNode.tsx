@@ -30,7 +30,6 @@ export default function BSDFNode({id}: { id: string }) {
             <NodeHeader title="BSDF" className="bg-green-500"/>
             {/* 输出 Handle 一行 */}
             <OutputHandle id="o-bsdf" tip="BSDF" className="!bg-green-500"/>
-
             {/* 参数部分 */}
             <div className="divide-y divide-gray-100 text-[10px]">
                 {/* 基础色 */}
