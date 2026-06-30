@@ -131,6 +131,9 @@
         "event": {
           "description": "事件名",
           "verification": "OnAfterSchool"
+        },
+        "time": {
+          "description": "时间"
         }
       }
     }
