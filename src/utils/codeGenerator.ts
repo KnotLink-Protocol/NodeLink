@@ -134,7 +134,8 @@ function genNodeCore(
         if (arg.type === "static") {
           emit(`${kv}["${an}"] = ${escapePy((arg as StaticArg).value)}`);
         } else if (arg.type === "optional") {
-          const v = argValues[an] ?? (arg as OptionalArg).defaultVal ?? "";
+          const oa = arg as OptionalArg;
+          const v = argValues[an] ?? oa.defaultVal ?? oa.options[0]?.[1] ?? "";
           emit(`${kv}["${an}"] = ${escapePy(v)}`);
         } else {
           const up = getHandleValue(progEdges, node.id, `i-${an}`);
