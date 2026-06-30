@@ -262,6 +262,7 @@ export default function NodeGraph() {
             setEdges(project.workspace.edges);
             setPyCode(project.code?.python ?? '');
             setShowCode(!!project.code?.python);
+            if (project.code?.python) setPyCode(project.code.python);
             // 注册动态 apps
             clearDynamicApps();
             if (project.apps) {
