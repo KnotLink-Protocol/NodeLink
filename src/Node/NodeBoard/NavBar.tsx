@@ -68,8 +68,27 @@ export default function NavBar() {
       <div className="p-3">
         <h2 className="text-base font-semibold text-gray-800 mb-3">节点列表</h2>
 
-        {/* ── 动态业务 App ── */}
-        {apps.map((app: AppDefinition) => (
+        {/* ── 全局包 ── */}
+        {apps.filter(a => a.source === 'global').map((app: AppDefinition) => (
+          <CollapseSection key={app.folder} title={app.appName} icon="🌐">
+            {app.functions.map((func) => {
+              const nodeType = makeNodeType(app.folder, func.funcName);
+              const label = func.funcType === 'signal' ? `📡 ${func.funcName}` : func.funcName;
+              const color = func.funcType === 'signal' ? 'bg-green-500' : app.color;
+              return (
+                <div key={nodeType} draggable onDragStart={(e) => onDragStart(e, nodeType)}
+                  className="bg-white rounded-lg shadow-sm border border-gray-200 px-2.5 py-2 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-gray-300 transition-all duration-200"
+                  title={func.description}>
+                  <div className={`${color} text-white text-[11px] font-semibold px-2 py-0.5 rounded mb-0.5 inline-block`}>{label}</div>
+                  <div className="text-[9px] text-gray-400 truncate">{func.description}</div>
+                </div>
+              );
+            })}
+          </CollapseSection>
+        ))}
+
+        {/* ── 工程包 ── */}
+        {apps.filter(a => a.source === 'project').map((app: AppDefinition) => (
           <CollapseSection key={app.folder} title={app.appName} icon="📦">
             {app.functions.map((func) => {
               const nodeType = makeNodeType(app.folder, func.funcName);

@@ -54,6 +54,7 @@ export interface AppDefinition {
   folder: string;
   color: string;
   functions: AppFunc[];
+  source: 'global' | 'project';  // 全局包 vs 工程包
 }
 
 // ── 颜色表 ──
@@ -76,7 +77,10 @@ export async function loadTauriFuncLists(): Promise<void> {
   try {
     const { invoke } = await import('@tauri-apps/api/core');
     const list: any[] = await invoke('get_funclists');
-    dynamicApps.length = 0;
+    // 替换全局包，保留工程包
+    for (let i = dynamicApps.length - 1; i >= 0; i--) {
+      if (dynamicApps[i].source === 'global') dynamicApps.splice(i, 1);
+    }
     for (const raw of list) {
       const folder = raw.__folder || 'unknown';
       const app = parseAppDefinition(folder, raw);
@@ -111,11 +115,28 @@ function parseAppDefinition(folder: string, raw: any): AppDefinition | null {
       });
     }
   }
-  return functions.length > 0 ? { appName, folder, color, functions } : null;
+  return functions.length > 0 ? { appName, folder, color, functions, source: 'global' as const } : null;
 }
 
+// 浏览器 dev 模式：从 funclist/ 静态导入
+const funcListModules = import.meta.glob<{ default: any }>(
+  "../../funclist/*/FuncList.json",
+  { eager: true },
+);
+
 export function parseAllFuncLists(): AppDefinition[] {
-  return [...dynamicApps];
+  const apps = [...dynamicApps];
+  // 浏览器环境：补充静态 glob 的全局包
+  for (const [path, mod] of Object.entries(funcListModules)) {
+    const raw = mod.default;
+    if (!raw?.appName) continue;
+    const parts = path.split("/");
+    const folder = parts[parts.length - 2];
+    if (apps.some(a => a.folder === folder)) continue;
+    const app = parseAppDefinition(folder, raw);
+    if (app) apps.push(app);
+  }
+  return apps;
 }
 
 // ── 动态运行时注册（kln 导入）──
@@ -165,6 +186,7 @@ export function registerDynamicApp(folder: string, raw: any): AppDefinition | nu
     folder,
     color: "bg-pink-500",
     functions,
+    source: 'project',
   };
   dynamicApps.push(app);
   bumpVersion();
@@ -177,7 +199,10 @@ export function getAppVersion(): number { return _appVersion; }
 function bumpVersion() { _appVersion++; window.dispatchEvent(new Event('apps-changed')); }
 
 export function clearDynamicApps() {
-  dynamicApps.length = 0;
+  // 只清除工程包，保留全局包
+  for (let i = dynamicApps.length - 1; i >= 0; i--) {
+    if (dynamicApps[i].source === 'project') dynamicApps.splice(i, 1);
+  }
   bumpVersion();
 }
 
