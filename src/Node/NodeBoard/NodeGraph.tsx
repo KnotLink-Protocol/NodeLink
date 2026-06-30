@@ -31,7 +31,7 @@ import SignalSubscriberNode from '../KnotLink/SignalSubscriberNode';
 import OpenSocketQuerierNode from '../KnotLink/OpenSocketQuerierNode';
 import OpenSocketResponserNode from '../KnotLink/OpenSocketResponserNode';
 import FuncNode from '../FuncNode/FuncNode';
-import { parseAllFuncLists, parseNodeType, makeNodeType, registerDynamicApp, clearDynamicApps, getDynamicApps } from '../../utils/funcListParser';
+import { parseAllFuncLists, parseNodeType, makeNodeType, registerDynamicApp, clearDynamicApps, getDynamicApps, loadTauriFuncLists } from '../../utils/funcListParser';
 import { generatePython } from '../../utils/codeGenerator';
 import { packKLN, unpackKLN } from '../../utils/klnPack';
 import { save, open } from '@tauri-apps/plugin-dialog';
@@ -205,6 +205,11 @@ export default function NodeGraph() {
         setPyCode(code);
         setShowCode(true);
     }, [nodes, edges]);
+
+    // Tauri: 启动时从 exe 目录加载 funclist/
+    useEffect(() => {
+        loadTauriFuncLists();
+    }, []);
 
     // 自动保存 localStorage + 标记修改
     useEffect(() => {
