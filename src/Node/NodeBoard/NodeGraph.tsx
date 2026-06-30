@@ -1,4 +1,4 @@
-import React, {useState, useCallback, useRef, useMemo} from 'react';
+import React, {useState, useCallback, useRef, useMemo, useEffect} from 'react';
 import {
     ReactFlow,
     ReactFlowProvider,
@@ -73,57 +73,59 @@ const nodeTypes = {
     ...dynamicNodeTypes,
 };
 
+const STORAGE_KEY = 'nodegraph-workspace';
+
+const DEFAULT_NODES: Node[] = [
+    {
+        id: 'ev-search',
+        type: makeNodeType('Everything_node', 'search'),
+        position: {x: 10, y: 30},
+        data: { folder: 'Everything_node', funcName: 'search', argValues: { function: 'search', query: '*.txt', max_results: '10' } },
+    },
+    {
+        id: 'msg-show',
+        type: makeNodeType('MsgNotification', 'ShowMsg'),
+        position: {x: 330, y: 30},
+        data: { folder: 'MsgNotification', funcName: 'ShowMsg', argValues: { msgContext: '搜索结果来了!' } },
+    },
+    {
+        id: 'np-pick',
+        type: makeNodeType('NamePicker', 'pick'),
+        position: {x: 10, y: 280},
+        data: { folder: 'NamePicker', funcName: 'pick', argValues: { action: 'pick', type: 'single' } },
+    },
+    {
+        id: 'tts-edge',
+        type: makeNodeType('MultiTTS_Client', 'EdgeTTS'),
+        position: {x: 330, y: 280},
+        data: { folder: 'MultiTTS_Client', funcName: 'EdgeTTS', argValues: { TTS: 'EdgeTTS', text: '张三同学', rate: '+0%', volume: '+0%', voice: 'zh-CN-XiaoxiaoNeural' } },
+    },
+];
+
+const DEFAULT_EDGES: Edge[] = [
+    {id: 'ev-msg', source: 'ev-search', sourceHandle: 'o-files', target: 'msg-show', targetHandle: 'i-msgContext'},
+    {id: 'np-tts', source: 'np-pick', sourceHandle: 'o-name', target: 'tts-edge', targetHandle: 'i-text'},
+];
+
+function loadWorkspace(): { nodes: Node[]; edges: Edge[] } {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) return JSON.parse(raw);
+    } catch {}
+    return { nodes: DEFAULT_NODES, edges: DEFAULT_EDGES };
+}
+
+function saveWorkspace(nodes: Node[], edges: Edge[]) {
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({ nodes, edges }));
+    } catch {}
+}
+
+const saved = loadWorkspace();
+
 export default function NodeGraph() {
-    const [nodes, setNodes] = useState<Node[]>([
-        // ── 示例: Everything 搜索 → 消息通知 ──
-        {
-            id: 'ev-search',
-            type: makeNodeType('Everything_node', 'search'),
-            position: {x: 10, y: 30},
-            data: {
-                folder: 'Everything_node',
-                funcName: 'search',
-                argValues: { function: 'search', query: '*.txt', max_results: '10' },
-            },
-        },
-        {
-            id: 'msg-show',
-            type: makeNodeType('MsgNotification', 'ShowMsg'),
-            position: {x: 330, y: 30},
-            data: {
-                folder: 'MsgNotification',
-                funcName: 'ShowMsg',
-                argValues: { msgContext: '搜索结果来了!' },
-            },
-        },
-        // ── 示例: 点名 → TTS 播报 ──
-        {
-            id: 'np-pick',
-            type: makeNodeType('NamePicker', 'pick'),
-            position: {x: 10, y: 280},
-            data: {
-                folder: 'NamePicker',
-                funcName: 'pick',
-                argValues: { action: 'pick', type: 'single' },
-            },
-        },
-        {
-            id: 'tts-edge',
-            type: makeNodeType('MultiTTS_Client', 'EdgeTTS'),
-            position: {x: 330, y: 280},
-            data: {
-                folder: 'MultiTTS_Client',
-                funcName: 'EdgeTTS',
-                argValues: { TTS: 'EdgeTTS', text: '张三同学', rate: '+0%', volume: '+0%', voice: 'zh-CN-XiaoxiaoNeural' },
-            },
-        },
-    ]);
-    const [edges, setEdges] = useState<Edge[]>([
-        // Everything search → files 输出 → 消息通知 msgContext
-        {id: 'ev-msg', source: 'ev-search', sourceHandle: 'o-files', target: 'msg-show', targetHandle: 'i-msgContext'},
-        // NamePicker pick → name 输出 → TTS text
-        {id: 'np-tts', source: 'np-pick', sourceHandle: 'o-name', target: 'tts-edge', targetHandle: 'i-text'},
-    ]);
+    const [nodes, setNodes] = useState<Node[]>(saved.nodes);
+    const [edges, setEdges] = useState<Edge[]>(saved.edges);
     const edgeReconnectSuccessful = useRef(true);
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
@@ -209,6 +211,21 @@ export default function NodeGraph() {
         setShowCode(true);
     }, [nodes, edges]);
 
+    // 自动保存
+    useEffect(() => {
+        saveWorkspace(nodes, edges);
+    }, [nodes, edges]);
+
+    // 重置工作区
+    const onReset = useCallback(() => {
+        if (confirm('确定重置工作区？所有节点和连线将恢复为默认。')) {
+            setNodes(DEFAULT_NODES);
+            setEdges(DEFAULT_EDGES);
+            setPyCode('');
+            setShowCode(false);
+        }
+    }, []);
+
     const rfStyle = {backgroundColor: '#FAFAFA'};
 
     return (
@@ -248,6 +265,13 @@ export default function NodeGraph() {
                     className="absolute top-3 right-3 z-10 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-lg transition-colors"
                 >
                     ⚡ 生成 Python 代码
+                </button>
+                <button
+                    onClick={onReset}
+                    className="absolute top-3 right-52 z-10 bg-gray-500 hover:bg-gray-600 text-white text-xs px-3 py-2 rounded-lg shadow-lg transition-colors"
+                    title="恢复默认工作区"
+                >
+                    🔄 重置
                 </button>
             </div>
             {showCode && (

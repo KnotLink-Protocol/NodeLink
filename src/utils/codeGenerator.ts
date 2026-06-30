@@ -95,6 +95,14 @@ function getDownstream(sourceId: string, nodes: Node[], edges: Edge[]): Set<stri
   return down;
 }
 
+// ── 短变量名 ──
+function shortName(node: Node): string {
+  const t = node.type ?? "";
+  const m = t.match(/^funcList:(.+?):(.+)$/);
+  if (m) return safeId(`${m[1]}_${m[2]}`).slice(0, 12);
+  return shortName(node);
+}
+
 // ── 生成单个节点的核心逻辑（不含回调框架）──
 interface Needs { klkv: boolean; querier: boolean; subscriber: boolean; sender: boolean; }
 interface IndentRef { v: number; }
@@ -120,7 +128,7 @@ function genNodeCore(
       const of = func as OpenSocketFunc;
       needs.klkv = true; needs.querier = true;
       emit(`# ${func.description}`);
-      const kv = `kv_${safeId(node.id).slice(0, 8)}`;
+      const kv = `kv_${shortName(node)}`;
       emit(`${kv} = KLKVMap()`);
       for (const [an, arg] of Object.entries(of.args)) {
         if (arg.type === "static") {
@@ -133,13 +141,13 @@ function genNodeCore(
           emit(`${kv}["${an}"] = str(${up ?? escapePy((arg as InputArg).defaultVal ?? "")})`);
         }
       }
-      const qn = `q_${safeId(node.id).slice(0, 8)}`;
+      const qn = `q_${shortName(node)}`;
       emit(`${qn} = OpenSocketQuerier("${of.appID}", "${of.openSocketID}")`);
       emit(`time.sleep(0.3)`);
       const rv = getVar(node.id);
       emit(`${rv}_raw = ${qn}.query(${kv}.serialize())`);
       if (of.returns.length > 0) {
-        const rm = `ret_${safeId(node.id).slice(0, 8)}`;
+        const rm = `ret_${shortName(node)}`;
         emit(`${rm} = KLKVMap()`);
         emit(`${rm}.deserialize(${rv}_raw)`);
         for (const [, f] of of.returns) {
@@ -209,7 +217,7 @@ function genNodeCore(
       const appId = (d as any).appId ?? "MyApp";
       const signalId = (d as any).signalId ?? "my_signal";
       const input = getHandleValue(progEdges, node.id, "i-data") ?? "''";
-      const sn = `sender_${safeId(node.id).slice(0, 8)}`;
+      const sn = `sender_${shortName(node)}`;
       emit(`${sn} = SignalSender("${appId}", "${signalId}")`);
       emit(`time.sleep(0.3)`);
       emit(`${sn}.emitt(str(${input}))`);
@@ -228,9 +236,9 @@ function genNodeCore(
       const socketId = (d as any).socketId ?? "my_service";
       const query = getHandleValue(progEdges, node.id, "i-query") ?? "''";
       const v = getVar(node.id);
-      emit(`querier_${safeId(node.id).slice(0, 8)} = OpenSocketQuerier("${appId}", "${socketId}")`);
+      emit(`querier_${shortName(node)} = OpenSocketQuerier("${appId}", "${socketId}")`);
       emit(`time.sleep(0.3)`);
-      emit(`${v} = querier_${safeId(node.id).slice(0, 8)}.query(str(${query}))`);
+      emit(`${v} = querier_${shortName(node)}.query(str(${query}))`);
       break;
     }
   }
@@ -248,14 +256,14 @@ function genCallbackCluster(
   _lines: string[],
 ) {
   const d = src.data || {};
-  const cbName = `on_${safeId(src.id).slice(0, 10)}`;
+  const cbName = `on_${shortName(src)}`;
 
   // ── 1. 创建通信对象（回调外） ──
   if (src.type === "SignalSubscriberNode") {
     needs.subscriber = true;
     const appId = d.appId ?? "MyApp";
     const signalId = d.signalId ?? "my_signal";
-    const sn = `sub_${safeId(src.id).slice(0, 8)}`;
+    const sn = `sub_${shortName(src)}`;
     emit(`# 订阅信号: ${appId}/${signalId}`);
     emit(`${sn} = SignalSubscriber("${appId}", "${signalId}")`);
     emit("");
@@ -267,7 +275,7 @@ function genCallbackCluster(
     const appId = d.appId ?? "MyApp";
     const socketId = d.socketId ?? "my_service";
     const reply = getHandleValue(progEdges, src.id, "i-request") ?? "''";
-    const rn = `responser_${safeId(src.id).slice(0, 8)}`;
+    const rn = `responser_${shortName(src)}`;
     emit(`# 响应服务: ${appId}/${socketId}`);
     emit(`${rn} = OpenSocketResponser("${appId}", "${socketId}")`);
     emit("");
@@ -284,13 +292,13 @@ function genCallbackCluster(
     if (func?.funcType === "signal") {
       const sf = func as SignalFunc;
       needs.klkv = true; needs.subscriber = true;
-      const sn = `sub_${safeId(src.id).slice(0, 8)}`;
+      const sn = `sub_${shortName(src)}`;
       emit(`# 订阅信号: ${sf.appID}/${sf.signalID} — ${sf.description}`);
       emit(`${sn} = SignalSubscriber("${sf.appID}", "${sf.signalID}")`);
       emit("");
       emit(`def ${cbName}(data):`);
       ind.v = 1;
-      const rm = `r_${safeId(src.id).slice(0, 8)}`;
+      const rm = `r_${shortName(src)}`;
       emit(`${rm} = KLKVMap()`);
       emit(`${rm}.deserialize(data)`);
       for (const [field, info] of Object.entries(sf.returns)) {
@@ -321,7 +329,7 @@ function genCallbackCluster(
 
   // ── 3. 注册回调 ──
   ind.v = 0;
-  const prefix = safeId(src.id).slice(0, 8);
+  const prefix = shortName(src);
   if (src.type === "SignalSubscriberNode" || (src.type?.startsWith("funcList:"))) {
     emit(`sub_${prefix}.set_RecvFunc(${cbName})`);
   } else if (src.type === "OpenSocketResponserNode") {

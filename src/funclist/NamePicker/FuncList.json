@@ -188,5 +188,29 @@
             "returns": []
         }
     },
-    "signal": {}
+    "signal": {
+        "onPickSingle": {
+      "appID": "NamePicker",
+      "signalID": "onPick",
+      "description": "单次点名触发时",
+      "returns": {
+        "type": {
+          "description": "类型",
+          "verification": "single"
+        },
+        "name": {
+          "description": "姓名",
+          "verification": ""
+        },
+        "no": {
+          "description": "学号",
+          "verification": ""
+        },
+        "sex": {
+          "description": "性别（0-男，1-女）",
+          "verification": ""
+        }
+      }
+    }
+    }
 }
