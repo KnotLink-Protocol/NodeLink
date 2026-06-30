@@ -1,0 +1,40 @@
+{
+  "appName": "Everything 搜索节点",
+  "openSocket": {
+    "search": {
+      "appID": "com.everything.node",
+      "openSocketID": "search",
+      "description": "使用 Everything 搜索引擎执行文件搜索、获取结果数量或打开文件所在文件夹",
+      "args": {
+        "function": {
+          "type": "optional",
+          "description": "要执行的操作类型",
+          "options": [
+            ["搜索文件（返回路径列表）", "search"],
+            ["仅获取结果数量", "search_count"],
+            ["打开第一个结果的所在文件夹", "open_folder"]
+          ],
+          "defaultVal": "search"
+        },
+        "query": {
+          "type": "input",
+          "description": "搜索关键词（支持 Everything 查询语法）",
+          "defaultVal": ""
+        },
+        "max_results": {
+          "type": "input",
+          "description": "最大返回文件数量（仅 search 操作有效，范围 1~100）",
+          "defaultVal": "20"
+        }
+      },
+      "returns": [
+        ["状态（成功/错误）", "status"],
+        ["错误信息（若有）", "message"],
+        ["文件列表（管道符 `|` 分隔，仅 search 操作）", "files"],
+        ["结果数量（search 返回实际数量，search_count 返回总数量）", "count"],
+        ["操作是否成功（仅 open_folder）", "success"]
+      ]
+    }
+  },
+  "signal": {}
+}

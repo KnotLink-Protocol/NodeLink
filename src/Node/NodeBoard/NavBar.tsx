@@ -13,6 +13,21 @@ const nodeCategories = {
   Test: [
     { name: 'BSDF', type: 'BSDFNode', color: 'bg-green-500' },
   ],
+  KnotLink: [
+    { name: '信号发送', type: 'SignalSenderNode', color: 'bg-yellow-500' },
+    { name: '信号订阅', type: 'SignalSubscriberNode', color: 'bg-lime-500' },
+    { name: 'Socket请求', type: 'OpenSocketQuerierNode', color: 'bg-teal-500' },
+    { name: 'Socket响应', type: 'OpenSocketResponserNode', color: 'bg-sky-500' },
+  ],
+  Programming: [
+    { name: 'Value', type: 'ValueNode', color: 'bg-emerald-500' },
+    { name: 'Variable', type: 'VariableNode', color: 'bg-indigo-500' },
+    { name: 'Arithmetic', type: 'ArithmeticNode', color: 'bg-amber-500' },
+    { name: 'Compare', type: 'CompareNode', color: 'bg-rose-500' },
+    { name: 'Print', type: 'PrintNode', color: 'bg-cyan-500' },
+    { name: 'If / Else', type: 'IfNode', color: 'bg-red-500' },
+    { name: 'For Loop', type: 'LoopNode', color: 'bg-violet-500' },
+  ],
 };
 
 export default function NavBar() {

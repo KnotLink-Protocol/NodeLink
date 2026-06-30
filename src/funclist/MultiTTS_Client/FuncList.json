@@ -1,0 +1,162 @@
+{
+  "appName": "MultiTTS",
+  "openSocket": {
+    "SysTTS": {
+      "appID": "0x00000022",
+      "openSocketID": "0x00000011",
+      "description": "调用系统TTS",
+      "args": {
+        "TTS": {
+          "type": "optional",
+          "options": [
+            [
+              "系统TTS",
+              "SysTTS"
+            ]
+          ],
+          "description": ""
+        },
+        "text": {
+          "type": "input",
+          "defaultVal": "测试语音内容",
+          "description": "内容"
+        },
+        "rate": {
+          "type": "input",
+          "defaultVal": "3",
+          "description": "速率（-10~10）"
+        },
+        "volume": {
+          "type": "input",
+          "defaultVal": "0.7",
+          "description": "音量（0~1）"
+        },
+        "voice_index": {
+          "type": "optional",
+          "options": [
+            [
+              "中英",
+              "0"
+            ],
+            [
+              "英",
+              "1"
+            ]
+          ],
+          "description": "讲述者"
+        }
+      },
+      "returns": []
+    },
+    "EdgeTTS": {
+      "appID": "0x00000022",
+      "openSocketID": "0x00000011",
+      "description": "调用EdgeTTS",
+      "args": {
+        "TTS": {
+          "type": "optional",
+          "description": "EdgeTTS",
+          "options": [
+            [
+              "EdgeTTS",
+              "EdgeTTS"
+            ]
+          ]
+        },
+        "text": {
+          "type": "input",
+          "description": "内容",
+          "defaultVal": "测试语音内容"
+        },
+        "rate": {
+          "type": "input",
+          "description": "速率",
+          "defaultVal": "+0%"
+        },
+        "volume": {
+          "type": "input",
+          "description": "音量",
+          "defaultVal": "+0%"
+        },
+        "voice": {
+          "type": "input",
+          "description": "讲述者",
+          "defaultVal": "zh-CN-XiaoxiaoNeural"
+        }
+      },
+      "returns": []
+    },
+    "GPT_SoVITS": {
+      "appID": "0x00000022",
+      "openSocketID": "0x00000011",
+      "description": "调用GPT_SoVITS",
+      "args": {
+        "TTS": {
+          "type": "optional",
+          "description": "",
+          "options": [
+            [
+              "GPT_SoVITS",
+              "GPT_SoVITS"
+            ]
+          ]
+        },
+        "ip": {
+          "type": "input",
+          "description": "IP",
+          "defaultVal": "127.0.0.1"
+        },
+        "port": {
+          "type": "input",
+          "description": "端口",
+          "defaultVal": "9880"
+        },
+        "text": {
+          "type": "input",
+          "description": "内容",
+          "defaultVal": "测试语音文本"
+        },
+        "text_lang": {
+          "type": "optional",
+          "description": "语言",
+          "options": [
+            [
+              "中文",
+              "zh"
+            ],
+            [
+              "英文",
+              "en"
+            ]
+          ]
+        },
+        "ref_audio_path": {
+          "type": "input",
+          "description": "参考音频路径",
+          "defaultVal": ""
+        },
+        "prompt_lang": {
+          "type": "optional",
+          "description": "参考音频语言",
+          "options": [
+            [
+              "中文",
+              "zh"
+            ],
+            [
+              "英文",
+              "en"
+            ]
+          ]
+        },
+        "prompt_text": {
+          "type": "input",
+          "description": "参考音频文本",
+          "defaultVal": "测试参考音频文本"
+        }
+      },
+      "returns": []
+    }
+  },
+  "signal": {}
+}
