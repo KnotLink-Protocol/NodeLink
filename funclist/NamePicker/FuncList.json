@@ -1,0 +1,216 @@
+{
+    "appName": "RandomPicker",
+    "openSocket": {
+        "pick": {
+            "appID": "NamePicker",
+            "openSocketID": "control",
+            "description": "抽取一名学生（单人）",
+            "args": {
+                "action": {
+                    "type": "static",
+                    "value": "pick",
+                    "description": "命令类型（固定为 pick）"
+                },
+                "type": {
+                    "type": "optional",
+                    "options": [
+                        ["单人", "single"]
+                    ],
+                    "defaultVal": "single",
+                    "description": "抽取类型（仅支持 single）"
+                }
+            },
+            "returns": [
+                ["学生姓名", "name"],
+                ["学号", "no"],
+                ["性别", "sex"]
+            ]
+        },
+        "multiple": {
+            "appID": "NamePicker",
+            "openSocketID": "control",
+            "description": "抽取多名学生（多人）",
+            "args": {
+                "action": {
+                    "type": "static",
+                    "value": "pick",
+                    "description": "命令类型（固定为 pick）"
+                },
+                "type": {
+                    "type": "static",
+                    "value": "multiple）",
+                    "description": "命令类型（固定为 multiple）"
+                },
+                "num": {
+                    "type": "input",
+                    "defaultVal": "1",
+                    "description": "抽取人数"
+                }
+            },
+            "returns": []
+        },
+        "window": {
+            "appID": "NamePicker",
+            "openSocketID": "control",
+            "description": "控制主窗口或托盘图标显示/隐藏",
+            "args": {
+                "action": {
+                    "type": "static",
+                    "value": "window",
+                    "description": "命令类型（固定为 window）"
+                },
+                "target": {
+                    "type": "optional",
+                    "options": [
+                        ["主窗口", "main"],
+                        ["托盘", "tray"]
+                    ],
+                    "defaultVal": "main",
+                    "description": "控制目标"
+                },
+                "op": {
+                    "type": "optional",
+                    "options": [
+                        ["显示", "show"],
+                        ["隐藏", "hide"]
+                    ],
+                    "defaultVal": "show",
+                    "description": "操作类型"
+                }
+            },
+            "returns": []
+        },
+        "get_names": {
+            "appID": "NamePicker",
+            "openSocketID": "control",
+            "description": "获取当前学生名单（JSON 数组）",
+            "args": {
+                "action": {
+                    "type": "static",
+                    "value": "get_names",
+                    "description": "命令类型（固定为 get_names）"
+                }
+            },
+            "returns": [
+                ["JSON 字符串(含 name/sex/no 数组)", "data"]
+            ]
+        },
+        "add_name": {
+            "appID": "NamePicker",
+            "openSocketID": "control",
+            "description": "添加一名学生到名单",
+            "args": {
+                "action": {
+                    "type": "static",
+                    "value": "add_name",
+                    "description": "命令类型（固定为 add_name）"
+                },
+                "name": {
+                    "type": "input",
+                    "defaultVal": "1",
+                    "description": "学生姓名"
+                },
+                "no": {
+                    "type": "input",
+                    "defaultVal": "1",
+                    "description": "学号"
+                },
+                "sex": {
+                    "type": "optional",
+                    "options": [
+                        ["男", "0"],
+                        ["女", "1"]
+                    ],
+                    "defaultVal": "0",
+                    "description": "性别（0-男，1-女）"
+                },
+                "pos": {
+                    "type": "input",
+                    "defaultVal": "",
+                    "description": "插入位置（从1开始，留空则追加到末尾）"
+                }
+            },
+            "returns": []
+        },
+        "del_name": {
+            "appID": "NamePicker",
+            "openSocketID": "control",
+            "description": "删除指定位置的学生",
+            "args": {
+                "action": {
+                    "type": "static",
+                    "value": "del_name",
+                    "description": "命令类型（固定为 del_name）"
+                },
+                "pos": {
+                    "type": "input",
+                    "defaultVal": "",
+                    "description": "要删除的位置（从1开始）"
+                }
+            },
+            "returns": []
+        },
+        "update_name": {
+            "appID": "NamePicker",
+            "openSocketID": "control",
+            "description": "更新指定位置的学生信息",
+            "args": {
+                "action": {
+                    "type": "static",
+                    "value": "update_name",
+                    "description": "命令类型（固定为 update_name）"
+                },
+                "pos": {
+                    "type": "input",
+                    "defaultVal": "",
+                    "description": "要更新的位置（从1开始）"
+                },
+                "name": {
+                    "type": "input",
+                    "defaultVal": "1",
+                    "description": "新姓名（可选）"
+                },
+                "no": {
+                    "type": "input",
+                    "defaultVal": "1",
+                    "description": "新学号（可选）"
+                },
+                "sex": {
+                    "type": "optional",
+                    "options": [
+                        ["男", "0"],
+                        ["女", "1"]
+                    ],
+                    "defaultVal": "1",
+                    "description": "新性别（0-男，1-女）（可选）"
+                }
+            },
+            "returns": []
+        }
+    },
+    "signal": {
+        "onPickSingle": {
+      "appID": "NamePicker",
+      "signalID": "onPick",
+      "description": "单次点名触发时",
+      "returns": {
+        "type": {
+          "description": "类型",
+          "verification": "single"
+        },
+        "name": {
+          "description": "姓名",
+          "verification": ""
+        },
+        "no": {
+          "description": "学号",
+          "verification": ""
+        },
+        "sex": {
+          "description": "性别（0-男，1-女）",
+          "verification": ""
+        }
+      }
+    }
+    }
+}

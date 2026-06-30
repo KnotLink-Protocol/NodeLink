@@ -1,0 +1,19 @@
+{
+  "appName": "消息提醒",
+  "openSocket": {
+    "ShowMsg": {
+      "appID": "0x00000014",
+      "openSocketID": "0x00000010",
+      "description": "弹出消息窗口",
+      "args": {
+        "msgContext": {
+          "type": "input",
+          "description": "消息内容",
+          "defaultVal": "测试消息"
+        }
+      },
+      "returns": []
+    }
+  },
+  "signal": {}
+}

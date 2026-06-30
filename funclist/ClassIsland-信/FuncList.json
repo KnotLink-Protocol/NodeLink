@@ -1,0 +1,141 @@
+{
+  "appName": "ClassIsland",
+  "openSocket": {
+    "ClassService": {
+      "appID": "0x00000031",
+      "openSocketID": "0x00000011",
+      "description": "课程服务接口",
+      "args": {
+        "action": {
+          "type": "optional",
+          "description": "获取",
+          "options": [
+            [
+              "当前课程",
+              "GetCurrentSubject"
+            ],
+            [
+              "下节课程",
+              "GetNextClassSubject"
+            ]
+          ]
+        }
+      },
+      "returns": [
+        [
+          "课程名",
+          "subject"
+        ],
+        [
+          "教师名",
+          "teacher"
+        ],
+        [
+          "状态",
+          "status"
+        ]
+      ]
+    },
+    "Notification": {
+      "appID": "0x00000031",
+      "openSocketID": "0x00000012",
+      "description": "提醒接口",
+      "args": {
+        "MaskContent": {
+          "type": "input",
+          "defaultVal": "测试遮罩内容",
+          "description": "遮罩内容"
+        },
+        "MaskDuration": {
+          "type": "input",
+          "defaultVal": "1",
+          "description": "遮罩时间(s)"
+        },
+        "OverlayContent": {
+          "type": "input",
+          "defaultVal": "测试正文内容",
+          "description": "正文内容"
+        },
+        "OverlayDuration": {
+          "type": "input",
+          "defaultVal": "0",
+          "description": "正文时间(s)"
+        },
+        "IsSpeechEnabled": {
+          "type": "optional",
+          "options": [
+            [
+              "启用",
+              "true"
+            ],
+            [
+              "禁用",
+              "false"
+            ]
+          ],
+          "description": "是否启用语音"
+        },
+        "SpeechContent": {
+          "type": "input",
+          "defaultVal": "测试语音内容",
+          "description": "语音内容"
+        }
+      },
+      "returns": [
+        [
+          "状态",
+          "status"
+        ]
+      ]
+    }
+  },
+  "signal": {
+    "ClassEvent": {
+      "appID": "0x00000031",
+      "signalID": "0x00000011",
+      "description": "课程事件",
+      "returns": {
+        "event": {
+          "description": "事件名",
+          "verification": ""
+        }
+      }
+    },
+    "OnClass": {
+      "appID": "0x00000031",
+      "signalID": "0x00000011",
+      "description": "上课",
+      "returns": {
+        "event": {
+          "description": "事件名",
+          "verification": "OnClass"
+        }
+      }
+    },
+    "OnBreakingTime": {
+      "appID": "0x00000031",
+      "signalID": "0x00000011",
+      "description": "下课",
+      "returns": {
+        "event": {
+          "description": "事件名",
+          "verification": "OnBreakingTime"
+        }
+      }
+    },
+    "OnAfterSchool": {
+      "appID": "0x00000031",
+      "signalID": "0x00000011",
+      "description": "放学",
+      "returns": {
+        "event": {
+          "description": "事件名",
+          "verification": "OnAfterSchool"
+        },
+        "time": {
+          "description": "时间"
+        }
+      }
+    }
+  }
+}

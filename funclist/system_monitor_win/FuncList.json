@@ -1,0 +1,29 @@
+{
+  "appName": "系统监控服务",
+  "openSocket": {
+    "system": {
+      "appID": "com.monitor.node",
+      "openSocketID": "system",
+      "description": "查询 Windows 主机的实时系统资源（CPU、内存、磁盘、网络）",
+      "args": {
+        "type": {
+          "type": "optional",
+          "description": "查询的资源类型",
+          "defaultVal": "all",
+          "options": [
+            ["全部", "all"],
+            ["CPU", "cpu"],
+            ["内存", "memory"],
+            ["磁盘", "disk"],
+            ["网络", "network"]
+          ]
+        }
+      },
+      "returns": [
+        ["序列化结果", "result"],
+        ["说明", "返回值为 KLKVMap 格式的键值对字符串，具体字段随 type 变化"]
+      ]
+    }
+  },
+  "signal": {}
+}
