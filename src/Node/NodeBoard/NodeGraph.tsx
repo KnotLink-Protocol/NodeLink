@@ -226,6 +226,46 @@ export default function NodeGraph() {
         }
     }, []);
 
+    // 导出工程文件
+    const onExport = useCallback(() => {
+        const data = JSON.stringify({ nodes, edges }, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `knotlink-workspace-${new Date().toISOString().slice(0, 10)}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }, [nodes, edges]);
+
+    // 导入工程文件
+    const fileRef = useRef<HTMLInputElement>(null);
+    const onImportClick = useCallback(() => {
+        fileRef.current?.click();
+    }, []);
+    const onImportFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+            try {
+                const data = JSON.parse(reader.result as string);
+                if (data.nodes && data.edges) {
+                    setNodes(data.nodes);
+                    setEdges(data.edges);
+                    setPyCode('');
+                    setShowCode(false);
+                } else {
+                    alert('无效的工程文件：缺少 nodes 或 edges');
+                }
+            } catch {
+                alert('文件解析失败，请检查 JSON 格式');
+            }
+        };
+        reader.readAsText(file);
+        e.target.value = ''; // 允许重复导入同一文件
+    }, []);
+
     const rfStyle = {backgroundColor: '#FAFAFA'};
 
     return (
@@ -266,13 +306,36 @@ export default function NodeGraph() {
                 >
                     ⚡ 生成 Python 代码
                 </button>
-                <button
-                    onClick={onReset}
-                    className="absolute top-3 right-52 z-10 bg-gray-500 hover:bg-gray-600 text-white text-xs px-3 py-2 rounded-lg shadow-lg transition-colors"
-                    title="恢复默认工作区"
-                >
-                    🔄 重置
-                </button>
+                <div className="absolute top-3 right-52 z-10 flex gap-2">
+                    <button
+                        onClick={onExport}
+                        className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-2 rounded-lg shadow-lg transition-colors"
+                        title="导出工程为 JSON 文件"
+                    >
+                        📤 导出
+                    </button>
+                    <button
+                        onClick={onImportClick}
+                        className="bg-orange-500 hover:bg-orange-600 text-white text-xs px-3 py-2 rounded-lg shadow-lg transition-colors"
+                        title="从 JSON 文件导入工程"
+                    >
+                        📥 导入
+                    </button>
+                    <button
+                        onClick={onReset}
+                        className="bg-gray-500 hover:bg-gray-600 text-white text-xs px-3 py-2 rounded-lg shadow-lg transition-colors"
+                        title="恢复默认工作区"
+                    >
+                        🔄 重置
+                    </button>
+                </div>
+                <input
+                    ref={fileRef}
+                    type="file"
+                    accept=".json"
+                    onChange={onImportFile}
+                    className="hidden"
+                />
             </div>
             {showCode && (
                 <div className="h-1/4 max-h-64 border-t border-gray-300 bg-gray-900 flex flex-col">
