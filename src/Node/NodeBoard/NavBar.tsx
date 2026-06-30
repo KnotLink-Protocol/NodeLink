@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { parseAllFuncLists, makeNodeType, getDynamicApps, clearDynamicApps, unregisterDynamicApp, type AppDefinition } from '../../utils/funcListParser';
+import { parseAllFuncLists, makeNodeType, type AppDefinition } from '../../utils/funcListParser';
 
 const knotLinkNodes = [
   { name: '信号发送', type: 'SignalSenderNode', color: 'bg-yellow-500' },
@@ -26,7 +26,6 @@ const testNodes = [
   { name: 'Number Output', type: 'NumberOutputNode', color: 'bg-blue-500' },
 ];
 
-// ── 折叠区组件 ──
 function CollapseSection({ title, icon, defaultOpen = true, children }: {
   title: string; icon: string; defaultOpen?: boolean; children: React.ReactNode;
 }) {
@@ -48,7 +47,6 @@ function CollapseSection({ title, icon, defaultOpen = true, children }: {
 }
 
 export default function NavBar() {
-  // 因为 dynamic apps 可能变化，不用 useMemo 缓存
   const [, forceUpdate] = useState(0);
   const apps = parseAllFuncLists();
 
@@ -68,9 +66,9 @@ export default function NavBar() {
       <div className="p-3">
         <h2 className="text-base font-semibold text-gray-800 mb-3">节点列表</h2>
 
-        {/* ── 全局包 ── */}
-        {apps.filter(a => a.source === 'global').map((app: AppDefinition) => (
-          <CollapseSection key={app.folder} title={app.appName} icon="🌐">
+        {/* ── 业务功能 ── */}
+        {apps.map((app: AppDefinition) => (
+          <CollapseSection key={app.folder} title={app.appName} icon="📦">
             {app.functions.map((func) => {
               const nodeType = makeNodeType(app.folder, func.funcName);
               const label = func.funcType === 'signal' ? `📡 ${func.funcName}` : func.funcName;
@@ -87,105 +85,34 @@ export default function NavBar() {
           </CollapseSection>
         ))}
 
-        {/* ── 工程包 ── */}
-        {apps.filter(a => a.source === 'project').map((app: AppDefinition) => (
-          <CollapseSection key={app.folder} title={app.appName} icon="📦">
-            {app.functions.map((func) => {
-              const nodeType = makeNodeType(app.folder, func.funcName);
-              const label = func.funcType === 'signal' ? `📡 ${func.funcName}` : func.funcName;
-              const color = func.funcType === 'signal' ? 'bg-green-500' : app.color;
-              return (
-                <div
-                  key={nodeType}
-                  draggable
-                  onDragStart={(e) => onDragStart(e, nodeType)}
-                  className="bg-white rounded-lg shadow-sm border border-gray-200 px-2.5 py-2 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-gray-300 transition-all duration-200"
-                  title={func.description}
-                >
-                  <div className={`${color} text-white text-[11px] font-semibold px-2 py-0.5 rounded mb-0.5 inline-block`}>
-                    {label}
-                  </div>
-                  <div className="text-[9px] text-gray-400 truncate">{func.description}</div>
-                </div>
-              );
-            })}
-          </CollapseSection>
-        ))}
-
-        {/* ── 包管理器 ── */}
-        {(() => {
-          const dyn = getDynamicApps();
-          if (dyn.length === 0) return null;
-          return (
-            <CollapseSection title="已加载功能包" icon="📦" defaultOpen={true}>
-              {dyn.map((app) => (
-                <div key={app.folder} className="flex items-center justify-between bg-white rounded-lg shadow-sm border border-purple-200 px-2.5 py-1.5 text-[11px]">
-                  <span className="text-gray-700 truncate flex-1">{app.appName}</span>
-                  <button
-                    onClick={() => unregisterDynamicApp(app.folder)}
-                    className="text-red-400 hover:text-red-600 ml-1 text-xs px-1 shrink-0"
-                    title="卸载"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-              <button
-                onClick={() => clearDynamicApps()}
-                className="w-full text-center text-[10px] text-red-400 hover:text-red-600 mt-1 py-0.5"
-              >
-                全部卸载
-              </button>
-            </CollapseSection>
-          );
-        })()}
-
         {/* ── KnotLink 底层协议 ── */}
-        <CollapseSection title="KnotLink 协议" icon="🔌" defaultOpen={true}>
+        <CollapseSection title="KnotLink 协议" icon="🔌" defaultOpen={false}>
           {knotLinkNodes.map((node) => (
-            <div
-              key={node.type}
-              draggable
-              onDragStart={(e) => onDragStart(e, node.type)}
-              className="bg-white rounded-lg shadow-sm border border-gray-200 px-2.5 py-2 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-gray-300 transition-all duration-200"
-            >
-              <div className={`${node.color} text-white text-[11px] font-semibold px-2 py-0.5 rounded mb-0.5 inline-block`}>
-                {node.name}
-              </div>
+            <div key={node.type} draggable onDragStart={(e) => onDragStart(e, node.type)}
+              className="bg-white rounded-lg shadow-sm border border-gray-200 px-2.5 py-2 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-gray-300 transition-all duration-200">
+              <div className={`${node.color} text-white text-[11px] font-semibold px-2 py-0.5 rounded mb-0.5 inline-block`}>{node.name}</div>
               <div className="text-[9px] text-gray-400">{node.type}</div>
             </div>
           ))}
         </CollapseSection>
 
         {/* ── Programming ── */}
-        <CollapseSection title="Programming" icon="💻" defaultOpen={true}>
+        <CollapseSection title="Programming" icon="💻" defaultOpen={false}>
           {programmingNodes.map((node) => (
-            <div
-              key={node.type}
-              draggable
-              onDragStart={(e) => onDragStart(e, node.type)}
-              className="bg-white rounded-lg shadow-sm border border-gray-200 px-2.5 py-2 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-gray-300 transition-all duration-200"
-            >
-              <div className={`${node.color} text-white text-[11px] font-semibold px-2 py-0.5 rounded mb-0.5 inline-block`}>
-                {node.name}
-              </div>
+            <div key={node.type} draggable onDragStart={(e) => onDragStart(e, node.type)}
+              className="bg-white rounded-lg shadow-sm border border-gray-200 px-2.5 py-2 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-gray-300 transition-all duration-200">
+              <div className={`${node.color} text-white text-[11px] font-semibold px-2 py-0.5 rounded mb-0.5 inline-block`}>{node.name}</div>
               <div className="text-[9px] text-gray-400">{node.type}</div>
             </div>
           ))}
         </CollapseSection>
 
         {/* ── Test ── */}
-        <CollapseSection title="Test" icon="🧪" defaultOpen={true}>
+        <CollapseSection title="Test" icon="🧪" defaultOpen={false}>
           {testNodes.map((node) => (
-            <div
-              key={node.type}
-              draggable
-              onDragStart={(e) => onDragStart(e, node.type)}
-              className="bg-white rounded-lg shadow-sm border border-gray-200 px-2.5 py-2 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-gray-300 transition-all duration-200"
-            >
-              <div className={`${node.color} text-white text-[11px] font-semibold px-2 py-0.5 rounded mb-0.5 inline-block`}>
-                {node.name}
-              </div>
+            <div key={node.type} draggable onDragStart={(e) => onDragStart(e, node.type)}
+              className="bg-white rounded-lg shadow-sm border border-gray-200 px-2.5 py-2 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-gray-300 transition-all duration-200">
+              <div className={`${node.color} text-white text-[11px] font-semibold px-2 py-0.5 rounded mb-0.5 inline-block`}>{node.name}</div>
               <div className="text-[9px] text-gray-400">{node.type}</div>
             </div>
           ))}

@@ -8,7 +8,7 @@ export interface StaticArg {
 
 export interface OptionalArg {
   type: "optional";
-  options: [string, string][]; // [显示文本, 值]
+  options: [string, string][];
   defaultVal?: string;
   description: string;
 }
@@ -21,7 +21,7 @@ export interface InputArg {
 
 export type FuncArg = StaticArg | OptionalArg | InputArg;
 
-export type ReturnEntry = [string, string]; // [描述, 字段名]
+export type ReturnEntry = [string, string];
 
 export interface OpenSocketFunc {
   funcName: string;
@@ -54,7 +54,6 @@ export interface AppDefinition {
   folder: string;
   color: string;
   functions: AppFunc[];
-  source: 'global' | 'project';  // 全局包 vs 工程包
 }
 
 // ── 颜色表 ──
@@ -69,18 +68,19 @@ function nextColor(): string {
   return COLORS[colorIdx++ % COLORS.length];
 }
 
-// ── 解析器 ──
-// 只从 exe 目录下的 funclist/ 读取（Tauri 运行时）
-// 浏览器 dev 模式通过 📦 加载功能包手动导入
+// ── 应用注册表（唯一数据源）──
+const dynamicApps: AppDefinition[] = [];
 
+export function parseAllFuncLists(): AppDefinition[] {
+  return [...dynamicApps];
+}
+
+// Tauri: 从 exe 目录 funclist/ 加载
 export async function loadTauriFuncLists(): Promise<void> {
   try {
     const { invoke } = await import('@tauri-apps/api/core');
     const list: any[] = await invoke('get_funclists');
-    // 替换全局包，保留工程包
-    for (let i = dynamicApps.length - 1; i >= 0; i--) {
-      if (dynamicApps[i].source === 'global') dynamicApps.splice(i, 1);
-    }
+    dynamicApps.length = 0;
     for (const raw of list) {
       const folder = raw.__folder || 'unknown';
       const app = parseAppDefinition(folder, raw);
@@ -115,35 +115,11 @@ function parseAppDefinition(folder: string, raw: any): AppDefinition | null {
       });
     }
   }
-  return functions.length > 0 ? { appName, folder, color, functions, source: 'global' as const } : null;
+  return functions.length > 0 ? { appName, folder, color, functions } : null;
 }
 
-// 浏览器 dev 模式：从 funclist/ 静态导入
-const funcListModules = import.meta.glob<{ default: any }>(
-  "../../funclist/*/FuncList.json",
-  { eager: true },
-);
-
-export function parseAllFuncLists(): AppDefinition[] {
-  const apps = [...dynamicApps];
-  // 浏览器环境：补充静态 glob 的全局包
-  for (const [path, mod] of Object.entries(funcListModules)) {
-    const raw = mod.default;
-    if (!raw?.appName) continue;
-    const parts = path.split("/");
-    const folder = parts[parts.length - 2];
-    if (apps.some(a => a.folder === folder)) continue;
-    const app = parseAppDefinition(folder, raw);
-    if (app) apps.push(app);
-  }
-  return apps;
-}
-
-// ── 动态运行时注册（kln 导入）──
-const dynamicApps: AppDefinition[] = [];
-
+// 注册（📦加载 / .kln 导入）
 export function registerDynamicApp(folder: string, raw: any): AppDefinition | null {
-  // 先移除同名旧版本
   const idx = dynamicApps.findIndex((a) => a.folder === folder);
   if (idx >= 0) dynamicApps.splice(idx, 1);
 
@@ -154,62 +130,32 @@ export function registerDynamicApp(folder: string, raw: any): AppDefinition | nu
   if (os && typeof os === "object") {
     for (const [funcName, def] of Object.entries(os) as [string, any][]) {
       functions.push({
-        funcName,
-        funcType: "openSocket",
-        appID: def.appID ?? "",
-        openSocketID: def.openSocketID ?? "",
-        description: def.description ?? "",
-        args: def.args ?? {},
-        returns: def.returns ?? [],
+        funcName, funcType: "openSocket",
+        appID: def.appID ?? "", openSocketID: def.openSocketID ?? "",
+        description: def.description ?? "", args: def.args ?? {}, returns: def.returns ?? [],
       });
     }
   }
-
   const sig = raw.signal;
   if (sig && typeof sig === "object") {
     for (const [funcName, def] of Object.entries(sig) as [string, any][]) {
       functions.push({
-        funcName,
-        funcType: "signal",
-        appID: def.appID ?? "",
-        signalID: def.signalID ?? "",
-        description: def.description ?? "",
-        returns: def.returns ?? {},
+        funcName, funcType: "signal",
+        appID: def.appID ?? "", signalID: def.signalID ?? "",
+        description: def.description ?? "", returns: def.returns ?? {},
       });
     }
   }
 
   if (functions.length === 0) return null;
 
-  const app: AppDefinition = {
-    appName,
-    folder,
-    color: "bg-pink-500",
-    functions,
-    source: 'project',
-  };
+  const app: AppDefinition = { appName, folder, color: "bg-pink-500", functions };
   dynamicApps.push(app);
   bumpVersion();
   return app;
 }
 
-// 全局版本号：dynamic apps 变化时自增，NavBar 依赖它刷新
-let _appVersion = 0;
-export function getAppVersion(): number { return _appVersion; }
-function bumpVersion() { _appVersion++; window.dispatchEvent(new Event('apps-changed')); }
-
-export function clearDynamicApps() {
-  // 只清除工程包，保留全局包
-  for (let i = dynamicApps.length - 1; i >= 0; i--) {
-    if (dynamicApps[i].source === 'project') dynamicApps.splice(i, 1);
-  }
-  bumpVersion();
-}
-
-export function getDynamicApps(): AppDefinition[] {
-  return [...dynamicApps];
-}
-
+// 卸载
 export function unregisterDynamicApp(folder: string): boolean {
   const idx = dynamicApps.findIndex((a) => a.folder === folder);
   if (idx >= 0) {
@@ -218,6 +164,15 @@ export function unregisterDynamicApp(folder: string): boolean {
     return true;
   }
   return false;
+}
+
+// 版本号
+let _appVersion = 0;
+export function getAppVersion(): number { return _appVersion; }
+function bumpVersion() { _appVersion++; window.dispatchEvent(new Event('apps-changed')); }
+
+export function getDynamicApps(): AppDefinition[] {
+  return [...dynamicApps];
 }
 
 // ── 节点类型命名 ──

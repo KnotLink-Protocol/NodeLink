@@ -31,7 +31,7 @@ import SignalSubscriberNode from '../KnotLink/SignalSubscriberNode';
 import OpenSocketQuerierNode from '../KnotLink/OpenSocketQuerierNode';
 import OpenSocketResponserNode from '../KnotLink/OpenSocketResponserNode';
 import FuncNode from '../FuncNode/FuncNode';
-import { parseAllFuncLists, parseNodeType, makeNodeType, registerDynamicApp, clearDynamicApps, getDynamicApps, loadTauriFuncLists } from '../../utils/funcListParser';
+import { parseAllFuncLists, parseNodeType, makeNodeType, registerDynamicApp, getDynamicApps, loadTauriFuncLists } from '../../utils/funcListParser';
 import { generatePython } from '../../utils/codeGenerator';
 import { packKLN, unpackKLN } from '../../utils/klnPack';
 import { save, open } from '@tauri-apps/plugin-dialog';
@@ -227,7 +227,6 @@ export default function NodeGraph() {
         setShowCode(false);
         setCurrentFile(null);
         setModified(false);
-        clearDynamicApps();
         setAppVersion(v => v + 1);
     }, [nodes]);
 
@@ -239,24 +238,23 @@ export default function NodeGraph() {
             setPyCode('');
             setShowCode(false);
             setCurrentFile(null);
-            clearDynamicApps();
-            setAppVersion(v => v + 1);
+setAppVersion(v => v + 1);
         }
     }, []);
 
     // ── 构建 kln 数据 ──
     const buildKLN = useCallback(async () => {
         const code = generatePython(nodes, edges);
-        const dynamicApps: Record<string, any> = {};
+        const aps: Record<string, any> = {};
         for (const app of getDynamicApps()) {
             const os: Record<string, any> = {}, sig: Record<string, any> = {};
             for (const f of app.functions) {
                 if (f.funcType === "openSocket") os[f.funcName] = { appID: f.appID, openSocketID: f.openSocketID, description: f.description, args: f.args, returns: f.returns };
                 else sig[f.funcName] = { appID: f.appID, signalID: f.signalID, description: f.description, returns: f.returns };
             }
-            dynamicApps[app.folder] = { appName: app.appName, openSocket: os, signal: sig };
+            aps[app.folder] = { appName: app.appName, openSocket: os, signal: sig };
         }
-        return await packKLN({ version: 1, name: 'KnotLink 工程', workspace: { nodes, edges }, code: { python: code }, apps: Object.keys(dynamicApps).length > 0 ? dynamicApps : undefined });
+        return await packKLN({ version: 1, name: 'KnotLink 工程', workspace: { nodes, edges }, code: { python: code }, apps: Object.keys(aps).length > 0 ? aps : undefined });
     }, [nodes, edges]);
 
     // ── 保存 ──
@@ -306,8 +304,6 @@ export default function NodeGraph() {
             setNodes(project.workspace.nodes); setEdges(project.workspace.edges);
             setCurrentFile(fp); setModified(false);
             setPyCode(project.code?.python ?? ''); setShowCode(!!project.code?.python);
-            clearDynamicApps();
-            if (project.apps) for (const [f, fl] of Object.entries(project.apps)) registerDynamicApp(f, fl);
             setAppVersion(v => v + 1);
         } catch {
             fileRef.current?.click();
@@ -320,8 +316,6 @@ export default function NodeGraph() {
             setNodes(project.workspace.nodes); setEdges(project.workspace.edges);
             setCurrentFile(file.name); setModified(false);
             setPyCode(project.code?.python ?? ''); setShowCode(!!project.code?.python);
-            clearDynamicApps();
-            if (project.apps) for (const [f, fl] of Object.entries(project.apps)) registerDynamicApp(f, fl);
             setAppVersion(v => v + 1);
         } catch (err: any) { alert(`打开失败: ${err.message}`); }
         e.target.value = '';
@@ -336,18 +330,7 @@ export default function NodeGraph() {
         const file = e.target.files?.[0];
         if (!file) return;
         try {
-            if (file.name.endsWith('.kln')) {
-                // .kln 中只提取 apps
-                const project = await unpackKLN(file);
-                let count = 0;
-                if (project.apps) {
-                    for (const [folder, funcList] of Object.entries(project.apps)) {
-                        if (registerDynamicApp(folder, funcList)) count++;
-                    }
-                }
-                setAppVersion(v => v + 1);
-                alert(`已加载 ${count} 个功能包`);
-            } else if (file.name.endsWith('.json')) {
+            if (file.name.endsWith('.json')) {
                 // FuncList.json 直接注册
                 const raw = JSON.parse(await new Promise<string>((resolve, reject) => {
                     const reader = new FileReader();
