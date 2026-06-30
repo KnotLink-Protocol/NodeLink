@@ -98,7 +98,7 @@ export default function NavBar() {
           const dyn = getDynamicApps();
           if (dyn.length === 0) return null;
           return (
-            <CollapseSection title="已加载功能包" icon="📦" defaultOpen={true}>
+            <CollapseSection title="已加载功能包" icon="📦" defaultOpen={false}>
               {dyn.map((app) => (
                 <div key={app.folder} className="flex items-center justify-between bg-white rounded-lg shadow-sm border border-purple-200 px-2.5 py-1.5 text-[11px]">
                   <span className="text-gray-700 truncate flex-1">{app.appName}</span>
