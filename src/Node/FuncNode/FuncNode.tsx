@@ -96,9 +96,17 @@ export default function FuncNode({ id, data }: { id: string; data?: any }) {
 
   // openSocket
   const ocf = func as OpenSocketFunc;
+  const hasInputArg = Object.values(ocf.args).some((a) => a.type === "input");
   return (
     <div className="relative min-w-[150px] bg-white border-gray-200 rounded-xl shadow-md font-sans">
       <NodeHeader title={funcName} className={color} />
+      {/* 如果没有 input 型参数，加一个触发口，用于被信号/其他节点触发 */}
+      {!hasInputArg && (
+        <div className="flex items-center px-3 py-1 relative border-b border-gray-100">
+          <InputHandle id="i-trigger" className="!bg-gray-400" />
+          <span className="text-gray-400 text-[9px] ml-2">触发</span>
+        </div>
+      )}
       <div className="divide-y divide-gray-100 text-[10px]">
         {Object.entries(ocf.args).map(([argName, arg]) => {
           if (arg.type === "static") return null; // 不显示
