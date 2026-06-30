@@ -69,30 +69,21 @@ function nextColor(): string {
 }
 
 // ── 解析器 ──
-// 浏览器: Vite build-time glob
-// Tauri: 运行时从文件系统读取
-const funcListModules = import.meta.glob<{ default: any }>(
-  "../../funclist/*/FuncList.json",
-  { eager: true },
-);
+// 只从 exe 目录下的 funclist/ 读取（Tauri 运行时）
+// 浏览器 dev 模式通过 📦 加载功能包手动导入
 
-// Tauri: 从文件系统加载 funclist/，注册到全局
 export async function loadTauriFuncLists(): Promise<void> {
   try {
-    const { readDir, readTextFile } = await import('@tauri-apps/plugin-fs');
-    const { appDir } = await import('@tauri-apps/api/path');
-    const base = await appDir();
-    const entries = await readDir(`${base}funclist`);
-    for (const entry of entries) {
-      if (!entry.name) continue;
-      try {
-        const raw = JSON.parse(await readTextFile(`${base}funclist/${entry.name}/FuncList.json`));
-        const app = parseAppDefinition(entry.name, raw);
-        if (app) dynamicApps.push(app);
-      } catch { /* skip */ }
+    const { invoke } = await import('@tauri-apps/api/core');
+    const list: any[] = await invoke('get_funclists');
+    dynamicApps.length = 0;
+    for (const raw of list) {
+      const folder = raw.__folder || 'unknown';
+      const app = parseAppDefinition(folder, raw);
+      if (app) dynamicApps.push(app);
     }
-    if (entries.length > 0) bumpVersion();
-  } catch { /* 非 Tauri 环境 */ }
+    bumpVersion();
+  } catch { /* 浏览器环境 */ }
 }
 
 function parseAppDefinition(folder: string, raw: any): AppDefinition | null {
@@ -123,66 +114,8 @@ function parseAppDefinition(folder: string, raw: any): AppDefinition | null {
   return functions.length > 0 ? { appName, folder, color, functions } : null;
 }
 
-export function parseAllFuncLists(includeDynamic = true): AppDefinition[] {
-  const apps: AppDefinition[] = [];
-
-  for (const [path, mod] of Object.entries(funcListModules)) {
-    const raw = mod.default;
-    // 提取文件夹名
-    const parts = path.split("/");
-    const folder = parts[parts.length - 2]; // <folder>/FuncList.json
-    if (!raw || typeof raw !== "object") continue;
-
-    const appName: string = raw.appName ?? folder;
-    const color = nextColor();
-    const functions: AppFunc[] = [];
-
-    // openSocket
-    const os = raw.openSocket;
-    if (os && typeof os === "object") {
-      for (const [funcName, def] of Object.entries(os) as [string, any][]) {
-        functions.push({
-          funcName,
-          funcType: "openSocket",
-          appID: def.appID ?? "",
-          openSocketID: def.openSocketID ?? "",
-          description: def.description ?? "",
-          args: def.args ?? {},
-          returns: def.returns ?? [],
-        });
-      }
-    }
-
-    // signal
-    const sig = raw.signal;
-    if (sig && typeof sig === "object") {
-      for (const [funcName, def] of Object.entries(sig) as [string, any][]) {
-        functions.push({
-          funcName,
-          funcType: "signal",
-          appID: def.appID ?? "",
-          signalID: def.signalID ?? "",
-          description: def.description ?? "",
-          returns: def.returns ?? {},
-        });
-      }
-    }
-
-    if (functions.length > 0) {
-      apps.push({ appName, folder, color, functions });
-    }
-  }
-
-  // 合并动态注册的 apps
-  if (includeDynamic) {
-    for (const da of dynamicApps) {
-      if (!apps.some((a) => a.folder === da.folder)) {
-        apps.push(da);
-      }
-    }
-  }
-
-  return apps;
+export function parseAllFuncLists(): AppDefinition[] {
+  return [...dynamicApps];
 }
 
 // ── 动态运行时注册（kln 导入）──

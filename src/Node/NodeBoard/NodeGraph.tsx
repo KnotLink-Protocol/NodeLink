@@ -208,7 +208,7 @@ export default function NodeGraph() {
 
     // Tauri: 启动时从 exe 目录加载 funclist/
     useEffect(() => {
-        loadTauriFuncLists();
+        loadTauriFuncLists().then(() => setAppVersion(v => v + 1));
     }, []);
 
     // 自动保存 localStorage + 标记修改
