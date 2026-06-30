@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { parseAllFuncLists, makeNodeType, getDynamicApps, clearDynamicApps, unregisterDynamicApp, type AppDefinition } from '../../utils/funcListParser';
+import { useDragContext } from '../../utils/dragContext';
 
 const knotLinkNodes = [
   { name: '信号发送', type: 'SignalSenderNode', color: 'bg-yellow-500' },
@@ -27,7 +28,7 @@ const testNodes = [
 ];
 
 // ── 折叠区组件 ──
-function CollapseSection({ title, icon, defaultOpen = false, children }: {
+function CollapseSection({ title, icon, defaultOpen = true, children }: {
   title: string; icon: string; defaultOpen?: boolean; children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -58,9 +59,9 @@ export default function NavBar() {
     return () => window.removeEventListener('apps-changed', handler);
   }, []);
 
-  const onDragStart = (event: React.DragEvent, nodeType: string) => {
-    event.dataTransfer.setData('application/reactflow', nodeType);
-    event.dataTransfer.effectAllowed = 'move';
+  const { startDrag } = useDragContext();
+  const onNodeMouseDown = (nodeType: string) => (e: React.MouseEvent) => {
+    startDrag(nodeType, e);
   };
 
   return (
@@ -78,8 +79,7 @@ export default function NavBar() {
               return (
                 <div
                   key={nodeType}
-                  draggable
-                  onDragStart={(e) => onDragStart(e, nodeType)}
+                  onMouseDown={onNodeMouseDown(nodeType)}
                   className="bg-white rounded-lg shadow-sm border border-gray-200 px-2.5 py-2 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-gray-300 transition-all duration-200"
                   title={func.description}
                 >
@@ -98,7 +98,7 @@ export default function NavBar() {
           const dyn = getDynamicApps();
           if (dyn.length === 0) return null;
           return (
-            <CollapseSection title="已加载功能包" icon="📦" defaultOpen={false}>
+            <CollapseSection title="已加载功能包" icon="📦" defaultOpen={true}>
               {dyn.map((app) => (
                 <div key={app.folder} className="flex items-center justify-between bg-white rounded-lg shadow-sm border border-purple-200 px-2.5 py-1.5 text-[11px]">
                   <span className="text-gray-700 truncate flex-1">{app.appName}</span>
@@ -122,7 +122,7 @@ export default function NavBar() {
         })()}
 
         {/* ── KnotLink 底层协议 ── */}
-        <CollapseSection title="KnotLink 协议" icon="🔌" defaultOpen={false}>
+        <CollapseSection title="KnotLink 协议" icon="🔌" defaultOpen={true}>
           {knotLinkNodes.map((node) => (
             <div
               key={node.type}
@@ -139,7 +139,7 @@ export default function NavBar() {
         </CollapseSection>
 
         {/* ── Programming ── */}
-        <CollapseSection title="Programming" icon="💻" defaultOpen={false}>
+        <CollapseSection title="Programming" icon="💻" defaultOpen={true}>
           {programmingNodes.map((node) => (
             <div
               key={node.type}
@@ -156,7 +156,7 @@ export default function NavBar() {
         </CollapseSection>
 
         {/* ── Test ── */}
-        <CollapseSection title="Test" icon="🧪" defaultOpen={false}>
+        <CollapseSection title="Test" icon="🧪" defaultOpen={true}>
           {testNodes.map((node) => (
             <div
               key={node.type}
