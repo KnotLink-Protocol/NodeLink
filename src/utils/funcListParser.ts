@@ -75,7 +75,7 @@ const funcListModules = import.meta.glob<{ default: any }>(
   { eager: true },
 );
 
-export function parseAllFuncLists(): AppDefinition[] {
+export function parseAllFuncLists(includeDynamic = true): AppDefinition[] {
   const apps: AppDefinition[] = [];
 
   for (const [path, mod] of Object.entries(funcListModules)) {
@@ -124,7 +124,76 @@ export function parseAllFuncLists(): AppDefinition[] {
     }
   }
 
+  // 合并动态注册的 apps
+  if (includeDynamic) {
+    for (const da of dynamicApps) {
+      if (!apps.some((a) => a.folder === da.folder)) {
+        apps.push(da);
+      }
+    }
+  }
+
   return apps;
+}
+
+// ── 动态运行时注册（kln 导入）──
+const dynamicApps: AppDefinition[] = [];
+
+export function registerDynamicApp(folder: string, raw: any): AppDefinition | null {
+  // 先移除同名旧版本
+  const idx = dynamicApps.findIndex((a) => a.folder === folder);
+  if (idx >= 0) dynamicApps.splice(idx, 1);
+
+  const appName: string = raw.appName ?? folder;
+  const functions: AppFunc[] = [];
+
+  const os = raw.openSocket;
+  if (os && typeof os === "object") {
+    for (const [funcName, def] of Object.entries(os) as [string, any][]) {
+      functions.push({
+        funcName,
+        funcType: "openSocket",
+        appID: def.appID ?? "",
+        openSocketID: def.openSocketID ?? "",
+        description: def.description ?? "",
+        args: def.args ?? {},
+        returns: def.returns ?? [],
+      });
+    }
+  }
+
+  const sig = raw.signal;
+  if (sig && typeof sig === "object") {
+    for (const [funcName, def] of Object.entries(sig) as [string, any][]) {
+      functions.push({
+        funcName,
+        funcType: "signal",
+        appID: def.appID ?? "",
+        signalID: def.signalID ?? "",
+        description: def.description ?? "",
+        returns: def.returns ?? {},
+      });
+    }
+  }
+
+  if (functions.length === 0) return null;
+
+  const app: AppDefinition = {
+    appName,
+    folder,
+    color: "bg-pink-500",
+    functions,
+  };
+  dynamicApps.push(app);
+  return app;
+}
+
+export function clearDynamicApps() {
+  dynamicApps.length = 0;
+}
+
+export function getDynamicApps(): AppDefinition[] {
+  return [...dynamicApps];
 }
 
 // ── 节点类型命名 ──

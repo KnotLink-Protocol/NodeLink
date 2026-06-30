@@ -31,8 +31,9 @@ import SignalSubscriberNode from '../KnotLink/SignalSubscriberNode';
 import OpenSocketQuerierNode from '../KnotLink/OpenSocketQuerierNode';
 import OpenSocketResponserNode from '../KnotLink/OpenSocketResponserNode';
 import FuncNode from '../FuncNode/FuncNode';
-import { parseAllFuncLists, parseNodeType, makeNodeType } from '../../utils/funcListParser';
+import { parseAllFuncLists, parseNodeType, makeNodeType, registerDynamicApp, clearDynamicApps, getDynamicApps } from '../../utils/funcListParser';
 import { generatePython } from '../../utils/codeGenerator';
+import { packKLN, unpackKLN } from '../../utils/klnPack';
 
 const connectionLineStyle = {stroke: 'black'};
 const edgeOptions = {
@@ -226,44 +227,65 @@ export default function NodeGraph() {
         }
     }, []);
 
-    // 导出工程文件
-    const onExport = useCallback(() => {
-        const data = JSON.stringify({ nodes, edges }, null, 2);
-        const blob = new Blob([data], { type: 'application/json' });
+    // 导出工程文件 (.kln)
+    const onExport = useCallback(async () => {
+        const code = generatePython(nodes, edges);
+        const dynamicApps: Record<string, any> = {};
+        for (const app of getDynamicApps()) {
+            const os: Record<string, any> = {};
+            const sig: Record<string, any> = {};
+            for (const f of app.functions) {
+                if (f.funcType === "openSocket") {
+                    os[f.funcName] = { appID: f.appID, openSocketID: f.openSocketID, description: f.description, args: f.args, returns: f.returns };
+                } else {
+                    sig[f.funcName] = { appID: f.appID, signalID: f.signalID, description: f.description, returns: f.returns };
+                }
+            }
+            dynamicApps[app.folder] = { appName: app.appName, openSocket: os, signal: sig };
+        }
+        const blob = await packKLN({
+            version: 1,
+            name: 'KnotLink 工程',
+            workspace: { nodes, edges },
+            code: { python: code },
+            apps: Object.keys(dynamicApps).length > 0 ? dynamicApps : undefined,
+        });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `knotlink-workspace-${new Date().toISOString().slice(0, 10)}.json`;
+        a.download = `project-${new Date().toISOString().slice(0, 10)}.kln`;
         a.click();
         URL.revokeObjectURL(url);
     }, [nodes, edges]);
 
-    // 导入工程文件
+    // 导入工程文件 (.kln)
     const fileRef = useRef<HTMLInputElement>(null);
     const onImportClick = useCallback(() => {
         fileRef.current?.click();
     }, []);
-    const onImportFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const onImportFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        const reader = new FileReader();
-        reader.onload = () => {
-            try {
-                const data = JSON.parse(reader.result as string);
-                if (data.nodes && data.edges) {
-                    setNodes(data.nodes);
-                    setEdges(data.edges);
-                    setPyCode('');
-                    setShowCode(false);
-                } else {
-                    alert('无效的工程文件：缺少 nodes 或 edges');
+        try {
+            const project = await unpackKLN(file);
+            setNodes(project.workspace.nodes);
+            setEdges(project.workspace.edges);
+            setPyCode(project.code?.python ?? '');
+            setShowCode(!!project.code?.python);
+            // 注册动态 apps
+            clearDynamicApps();
+            if (project.apps) {
+                for (const [folder, funcList] of Object.entries(project.apps)) {
+                    registerDynamicApp(folder, funcList);
                 }
-            } catch {
-                alert('文件解析失败，请检查 JSON 格式');
             }
-        };
-        reader.readAsText(file);
-        e.target.value = ''; // 允许重复导入同一文件
+            if (project.errors.length > 0) {
+                console.warn('KLN 导入警告:', project.errors);
+            }
+        } catch (err: any) {
+            alert(`导入失败: ${err.message}`);
+        }
+        e.target.value = '';
     }, []);
 
     const rfStyle = {backgroundColor: '#FAFAFA'};

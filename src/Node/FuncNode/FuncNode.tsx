@@ -13,8 +13,6 @@ import {
   type InputArg,
 } from "../../utils/funcListParser";
 
-const allApps = parseAllFuncLists();
-
 // ── 颜色表（与解析器对齐） ──
 const COLOR_MAP: Record<string, string> = {
   "Everything_node": "bg-teal-500",
@@ -33,7 +31,7 @@ export default function FuncNode({ id, data }: { id: string; data?: any }) {
   const { updateNodeData } = useReactFlow();
   const folder: string = data?.folder ?? "";
   const funcName: string = data?.funcName ?? "";
-  const func: AppFunc | undefined = findFunc(allApps, folder, funcName);
+  const func: AppFunc | undefined = findFunc(parseAllFuncLists(), folder, funcName);
 
   if (!func) {
     return (

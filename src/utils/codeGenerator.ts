@@ -1,7 +1,5 @@
 import type { Node, Edge } from "@xyflow/react";
-import { parseAllFuncLists, findFunc, type OpenSocketFunc, type SignalFunc, type StaticArg, type OptionalArg, type InputArg } from "./funcListParser";
-
-const allApps = parseAllFuncLists();
+import { parseAllFuncLists, findFunc, type OpenSocketFunc, type SignalFunc, type StaticArg, type OptionalArg, type InputArg, type AppDefinition } from "./funcListParser";
 
 const varMap = new Map<string, string>();
 let varCounter = 0;
@@ -63,7 +61,7 @@ function topologicalSort(nodes: Node[], edges: Edge[]): Node[] {
 }
 
 // ── 判断被动源节点（无输入边 + 订阅/信号类型）───────────────────
-function isPassiveSource(nodeType: string | undefined, nodeId: string, edges: Edge[]): boolean {
+function isPassiveSource(allApps: AppDefinition[], nodeType: string | undefined, nodeId: string, edges: Edge[]): boolean {
   const hasInput = edges.some((e) => e.target === nodeId);
   if (hasInput) return false;
   if (!nodeType) return false;
@@ -108,6 +106,7 @@ interface Needs { klkv: boolean; querier: boolean; subscriber: boolean; sender: 
 interface IndentRef { v: number; }
 
 function genNodeCore(
+  allApps: AppDefinition[],
   node: Node,
   progEdges: Edge[],
   emit: (s: string) => void,
@@ -247,6 +246,7 @@ function genNodeCore(
 
 // ── 生成一个被动源的完整回调集群 ──
 function genCallbackCluster(
+  allApps: AppDefinition[],
   src: Node,
   downstreamIds: Set<string>,
   allSorted: Node[],
@@ -325,7 +325,7 @@ function genCallbackCluster(
   // ── 2. 下游节点（嵌套在回调内）──
   const dsNodes = allSorted.filter((n) => downstreamIds.has(n.id));
   for (const dn of dsNodes) {
-    genNodeCore(dn, progEdges, emit, ind, needs);
+    genNodeCore(allApps, dn, progEdges, emit, ind, needs);
   }
 
   // ── 3. 注册回调 ──
@@ -357,6 +357,7 @@ export function generatePython(nodes: Node[], edges: Edge[]): string {
   const progNodes = nodes.filter((n) => progTypes.has(n.type ?? "") || isFuncListNode(n.type));
   if (progNodes.length === 0) return "# 请先添加节点";
 
+  const allApps = parseAllFuncLists();
   const progNodeIds = new Set(progNodes.map((n) => n.id));
   const progEdges = edges.filter((e) => progNodeIds.has(e.source) && progNodeIds.has(e.target));
 
@@ -366,7 +367,7 @@ export function generatePython(nodes: Node[], edges: Edge[]): string {
   const ctx = new Map<string, string | null>();
 
   for (const n of progNodes) {
-    if (isPassiveSource(n.type, n.id, progEdges)) {
+    if (isPassiveSource(allApps, n.type, n.id, progEdges)) {
       passiveSources.push(n);
       const ds = getDownstream(n.id, progNodes, progEdges);
       passiveDown.set(n.id, ds);
@@ -389,14 +390,14 @@ export function generatePython(nodes: Node[], edges: Edge[]): string {
   let topLines = 0;
   for (const node of sorted) {
     if (ctx.get(node.id) !== null) continue;
-    genNodeCore(node, progEdges, emit, ind, needs);
+    genNodeCore(allApps, node, progEdges, emit, ind, needs);
     topLines++;
   }
   if (topLines > 0) emit("");
 
   // ── 阶段 3: 每个被动源 → 回调集群 ──
   for (const src of passiveSources) {
-    genCallbackCluster(src, passiveDown.get(src.id) ?? new Set(), sorted, progEdges, emit, ind, needs, lines);
+    genCallbackCluster(allApps, src, passiveDown.get(src.id) ?? new Set(), sorted, progEdges, emit, ind, needs, lines);
   }
 
   // ── 阶段 4: 保活 ──
