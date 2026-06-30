@@ -34,6 +34,14 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "fileAssociations": [
+      {
+        "ext": ["kln"],
+        "name": "KnotLink 工程文件",
+        "description": "KnotLink NodeGraph Project",
+        "role": "Editor"
+      }
+    ],
     "android": {
       "debugApplicationIdSuffix": ".debug"
     }

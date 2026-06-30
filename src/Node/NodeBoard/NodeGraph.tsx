@@ -34,6 +34,8 @@ import FuncNode from '../FuncNode/FuncNode';
 import { parseAllFuncLists, parseNodeType, makeNodeType, registerDynamicApp, clearDynamicApps, getDynamicApps } from '../../utils/funcListParser';
 import { generatePython } from '../../utils/codeGenerator';
 import { packKLN, unpackKLN } from '../../utils/klnPack';
+import { save, open } from '@tauri-apps/plugin-dialog';
+import { writeFile, readFile } from '@tauri-apps/plugin-fs';
 
 const connectionLineStyle = {stroke: 'black'};
 const edgeOptions = {
@@ -237,70 +239,86 @@ export default function NodeGraph() {
         }
     }, []);
 
-    // 导出工程文件 (.kln)
-    const onExport = useCallback(async () => {
+    // ── 构建 kln 数据 ──
+    const buildKLN = useCallback(async () => {
         const code = generatePython(nodes, edges);
         const dynamicApps: Record<string, any> = {};
         for (const app of getDynamicApps()) {
-            const os: Record<string, any> = {};
-            const sig: Record<string, any> = {};
+            const os: Record<string, any> = {}, sig: Record<string, any> = {};
             for (const f of app.functions) {
-                if (f.funcType === "openSocket") {
-                    os[f.funcName] = { appID: f.appID, openSocketID: f.openSocketID, description: f.description, args: f.args, returns: f.returns };
-                } else {
-                    sig[f.funcName] = { appID: f.appID, signalID: f.signalID, description: f.description, returns: f.returns };
-                }
+                if (f.funcType === "openSocket") os[f.funcName] = { appID: f.appID, openSocketID: f.openSocketID, description: f.description, args: f.args, returns: f.returns };
+                else sig[f.funcName] = { appID: f.appID, signalID: f.signalID, description: f.description, returns: f.returns };
             }
             dynamicApps[app.folder] = { appName: app.appName, openSocket: os, signal: sig };
         }
-        const fname = `project-${new Date().toISOString().slice(0, 10)}.kln`;
-        const blob = await packKLN({
-            version: 1,
-            name: 'KnotLink 工程',
-            workspace: { nodes, edges },
-            code: { python: code },
-            apps: Object.keys(dynamicApps).length > 0 ? dynamicApps : undefined,
-        });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fname;
-        a.click();
-        URL.revokeObjectURL(url);
-        setCurrentFile(fname);
-        setModified(false);
+        return await packKLN({ version: 1, name: 'KnotLink 工程', workspace: { nodes, edges }, code: { python: code }, apps: Object.keys(dynamicApps).length > 0 ? dynamicApps : undefined });
     }, [nodes, edges]);
 
-    // 导入工程文件 (.kln)
+    // ── 保存 ──
+    const onSave = useCallback(async () => {
+        try {
+            let savePath = currentFile;
+            if (!savePath) {
+                savePath = await save({ filters: [{ name: 'KnotLink', extensions: ['kln'] }] });
+                if (!savePath) return;
+            }
+            const blob = await buildKLN();
+            const buf = new Uint8Array(await blob.arrayBuffer());
+            await writeFile(savePath, buf);
+            setCurrentFile(savePath);
+            setModified(false);
+        } catch (err: any) {
+            console.error('save error:', err);
+            alert(`保存失败: ${err?.message || err}`);
+        }
+    }, [buildKLN, currentFile]);
+
+    // ── 另存为 ──
+    const onSaveAs = useCallback(async () => {
+        try {
+            const savePath = await save({ filters: [{ name: 'KnotLink', extensions: ['kln'] }] });
+            if (!savePath) return;
+            const blob = await buildKLN();
+            const buf = new Uint8Array(await blob.arrayBuffer());
+            await writeFile(savePath, buf);
+            setCurrentFile(savePath);
+            setModified(false);
+        } catch (err: any) {
+            console.error('save error:', err);
+            alert(`保存失败: ${err?.message || err}`);
+        }
+    }, [buildKLN]);
+
+    // ── 打开 ──
     const fileRef = useRef<HTMLInputElement>(null);
-    const onImportClick = useCallback(() => {
-        fileRef.current?.click();
+    const onOpen = useCallback(async () => {
+        try {
+            const selected = await open({ filters: [{ name: 'KnotLink 工程', extensions: ['kln'] }], multiple: false });
+            if (!selected) return;
+            const fp = typeof selected === 'string' ? selected : selected.path;
+            const data = await readFile(fp);
+            const project = await unpackKLN(new File([new Blob([data])], fp));
+            setNodes(project.workspace.nodes); setEdges(project.workspace.edges);
+            setCurrentFile(fp); setModified(false);
+            setPyCode(project.code?.python ?? ''); setShowCode(!!project.code?.python);
+            clearDynamicApps();
+            if (project.apps) for (const [f, fl] of Object.entries(project.apps)) registerDynamicApp(f, fl);
+            setAppVersion(v => v + 1);
+        } catch {
+            fileRef.current?.click();
+        }
     }, []);
-    const onImportFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
+    const onOpenFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]; if (!file) return;
         try {
             const project = await unpackKLN(file);
-            setNodes(project.workspace.nodes);
-            setEdges(project.workspace.edges);
-            setCurrentFile(file.name);
-            setPyCode(project.code?.python ?? '');
-            setShowCode(!!project.code?.python);
-            if (project.code?.python) setPyCode(project.code.python);
-            // 注册动态 apps
+            setNodes(project.workspace.nodes); setEdges(project.workspace.edges);
+            setCurrentFile(file.name); setModified(false);
+            setPyCode(project.code?.python ?? ''); setShowCode(!!project.code?.python);
             clearDynamicApps();
-            if (project.apps) {
-                for (const [folder, funcList] of Object.entries(project.apps)) {
-                    registerDynamicApp(folder, funcList);
-                }
-            }
+            if (project.apps) for (const [f, fl] of Object.entries(project.apps)) registerDynamicApp(f, fl);
             setAppVersion(v => v + 1);
-            if (project.errors.length > 0) {
-                console.warn('KLN 导入警告:', project.errors);
-            }
-        } catch (err: any) {
-            alert(`导入失败: ${err.message}`);
-        }
+        } catch (err: any) { alert(`打开失败: ${err.message}`); }
         e.target.value = '';
     }, []);
 
@@ -392,9 +410,9 @@ export default function NodeGraph() {
                 {/* ── 工具栏 ── */}
                 <div className="absolute top-3 right-3 z-10 flex gap-2">
                     <button onClick={onNew} className="bg-gray-600 hover:bg-gray-700 text-white text-xs px-3 py-1.5 rounded shadow transition-colors" title="新建 (Ctrl+N)">📄 新建</button>
-                    <button onClick={onImportClick} className="bg-gray-600 hover:bg-gray-700 text-white text-xs px-3 py-1.5 rounded shadow transition-colors" title="打开 (Ctrl+O)">📂 打开</button>
-                    <button onClick={onExport} className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded shadow transition-colors" title="保存 (Ctrl+S)">💾 保存</button>
-                    <button onClick={onExport} className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded shadow transition-colors" title="另存为...">💾 另存为...</button>
+                    <button onClick={onOpen} className="bg-gray-600 hover:bg-gray-700 text-white text-xs px-3 py-1.5 rounded shadow transition-colors" title="打开 (Ctrl+O)">📂 打开</button>
+                    <button onClick={onSave} className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded shadow transition-colors" title="保存 (Ctrl+S)">💾 保存</button>
+                    <button onClick={onSaveAs} className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded shadow transition-colors" title="另存为...">💾 另存为...</button>
                     <button onClick={onLoadPkgClick} className="bg-gray-600 hover:bg-gray-700 text-white text-xs px-3 py-1.5 rounded shadow transition-colors" title="加载功能包">📦</button>
                     <div className="w-px bg-gray-400 mx-1" />
                     <button onClick={onGenerate} className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1.5 rounded shadow transition-colors" title="生成代码 (Ctrl+G)">⚡ 生成</button>
@@ -404,7 +422,7 @@ export default function NodeGraph() {
                     ref={fileRef}
                     type="file"
                     accept=".kln"
-                    onChange={onImportFile}
+                    onChange={onOpenFile}
                     className="hidden"
                 />
                 <input

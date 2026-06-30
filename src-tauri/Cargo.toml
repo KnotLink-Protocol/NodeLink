@@ -26,3 +26,5 @@ tauri-plugin-log = "2"
 
 # Fix: cookie 0.18.1 与 time 0.3.52+ 不兼容，强制降级
 time = "=0.3.36"
+tauri-plugin-dialog = "2.7.1"
+tauri-plugin-fs = "2.5.1"
