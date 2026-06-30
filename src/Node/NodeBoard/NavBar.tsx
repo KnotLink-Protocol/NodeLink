@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { parseAllFuncLists, makeNodeType, type AppDefinition } from '../../utils/funcListParser';
+import { parseAllFuncLists, makeNodeType, getDynamicApps, clearDynamicApps, unregisterDynamicApp, type AppDefinition } from '../../utils/funcListParser';
 
 const knotLinkNodes = [
   { name: '信号发送', type: 'SignalSenderNode', color: 'bg-yellow-500' },
@@ -27,7 +27,7 @@ const testNodes = [
 ];
 
 // ── 折叠区组件 ──
-function CollapseSection({ title, icon, defaultOpen = true, children }: {
+function CollapseSection({ title, icon, defaultOpen = false, children }: {
   title: string; icon: string; defaultOpen?: boolean; children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -92,6 +92,34 @@ export default function NavBar() {
             })}
           </CollapseSection>
         ))}
+
+        {/* ── 包管理器 ── */}
+        {(() => {
+          const dyn = getDynamicApps();
+          if (dyn.length === 0) return null;
+          return (
+            <CollapseSection title="已加载功能包" icon="📦" defaultOpen={true}>
+              {dyn.map((app) => (
+                <div key={app.folder} className="flex items-center justify-between bg-white rounded-lg shadow-sm border border-purple-200 px-2.5 py-1.5 text-[11px]">
+                  <span className="text-gray-700 truncate flex-1">{app.appName}</span>
+                  <button
+                    onClick={() => unregisterDynamicApp(app.folder)}
+                    className="text-red-400 hover:text-red-600 ml-1 text-xs px-1 shrink-0"
+                    title="卸载"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+              <button
+                onClick={() => clearDynamicApps()}
+                className="w-full text-center text-[10px] text-red-400 hover:text-red-600 mt-1 py-0.5"
+              >
+                全部卸载
+              </button>
+            </CollapseSection>
+          );
+        })()}
 
         {/* ── KnotLink 底层协议 ── */}
         <CollapseSection title="KnotLink 协议" icon="🔌" defaultOpen={false}>

@@ -203,6 +203,16 @@ export function getDynamicApps(): AppDefinition[] {
   return [...dynamicApps];
 }
 
+export function unregisterDynamicApp(folder: string): boolean {
+  const idx = dynamicApps.findIndex((a) => a.folder === folder);
+  if (idx >= 0) {
+    dynamicApps.splice(idx, 1);
+    bumpVersion();
+    return true;
+  }
+  return false;
+}
+
 // ── 节点类型命名 ──
 export function makeNodeType(folder: string, funcName: string): string {
   return `funcList:${folder}:${funcName}`;
