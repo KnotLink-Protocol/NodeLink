@@ -194,6 +194,8 @@ export default function NodeGraph() {
     );
 
     const [pyCode, setPyCode] = useState<string>('');
+    const [currentFile, setCurrentFile] = useState<string | null>(null);
+    const [modified, setModified] = useState(false);
     const [showCode, setShowCode] = useState(false);
 
     const onGenerate = useCallback(() => {
@@ -202,10 +204,25 @@ export default function NodeGraph() {
         setShowCode(true);
     }, [nodes, edges]);
 
-    // 自动保存
+    // 自动保存 localStorage + 标记修改
     useEffect(() => {
         saveWorkspace(nodes, edges);
+        setModified(true);
     }, [nodes, edges]);
+
+
+    // 新建
+    const onNew = useCallback(() => {
+        if (nodes.length > 0 && !confirm('当前工作区未保存，确定新建？')) return;
+        setNodes([]);
+        setEdges([]);
+        setPyCode('');
+        setShowCode(false);
+        setCurrentFile(null);
+        setModified(false);
+        clearDynamicApps();
+        setAppVersion(v => v + 1);
+    }, [nodes]);
 
     // 重置工作区
     const onReset = useCallback(() => {
@@ -214,6 +231,9 @@ export default function NodeGraph() {
             setEdges(DEFAULT_EDGES);
             setPyCode('');
             setShowCode(false);
+            setCurrentFile(null);
+            clearDynamicApps();
+            setAppVersion(v => v + 1);
         }
     }, []);
 
@@ -233,6 +253,7 @@ export default function NodeGraph() {
             }
             dynamicApps[app.folder] = { appName: app.appName, openSocket: os, signal: sig };
         }
+        const fname = `project-${new Date().toISOString().slice(0, 10)}.kln`;
         const blob = await packKLN({
             version: 1,
             name: 'KnotLink 工程',
@@ -243,9 +264,11 @@ export default function NodeGraph() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `project-${new Date().toISOString().slice(0, 10)}.kln`;
+        a.download = fname;
         a.click();
         URL.revokeObjectURL(url);
+        setCurrentFile(fname);
+        setModified(false);
     }, [nodes, edges]);
 
     // 导入工程文件 (.kln)
@@ -260,6 +283,7 @@ export default function NodeGraph() {
             const project = await unpackKLN(file);
             setNodes(project.workspace.nodes);
             setEdges(project.workspace.edges);
+            setCurrentFile(file.name);
             setPyCode(project.code?.python ?? '');
             setShowCode(!!project.code?.python);
             if (project.code?.python) setPyCode(project.code.python);
@@ -361,41 +385,20 @@ export default function NodeGraph() {
                         <Controls/>
                     </ReactFlow>
                 </ReactFlowProvider>
-                <button
-                    onClick={onGenerate}
-                    className="absolute top-3 right-3 z-10 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-lg transition-colors"
-                >
-                    ⚡ 生成 Python 代码
-                </button>
-                <div className="absolute top-3 right-52 z-10 flex gap-2">
-                    <button
-                        onClick={onExport}
-                        className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-2 rounded-lg shadow-lg transition-colors"
-                        title="导出工程为 JSON 文件"
-                    >
-                        📤 导出
-                    </button>
-                    <button
-                        onClick={onImportClick}
-                        className="bg-orange-500 hover:bg-orange-600 text-white text-xs px-3 py-2 rounded-lg shadow-lg transition-colors"
-                        title="从 .kln 文件导入完整工程"
-                    >
-                        📥 导入
-                    </button>
-                    <button
-                        onClick={onLoadPkgClick}
-                        className="bg-purple-500 hover:bg-purple-600 text-white text-xs px-3 py-2 rounded-lg shadow-lg transition-colors"
-                        title="加载功能包 FuncList.json（不覆盖工作区）"
-                    >
-                        📦 加载
-                    </button>
-                    <button
-                        onClick={onReset}
-                        className="bg-gray-500 hover:bg-gray-600 text-white text-xs px-3 py-2 rounded-lg shadow-lg transition-colors"
-                        title="恢复默认工作区"
-                    >
-                        🔄 重置
-                    </button>
+                {/* ── 文件名 ── */}
+                <div className="absolute top-3 left-3 z-10 bg-white/80 backdrop-blur text-gray-700 text-xs px-3 py-1.5 rounded shadow">
+                    {currentFile || '未命名工程.kln'}{modified ? ' *' : ''}
+                </div>
+                {/* ── 工具栏 ── */}
+                <div className="absolute top-3 right-3 z-10 flex gap-2">
+                    <button onClick={onNew} className="bg-gray-600 hover:bg-gray-700 text-white text-xs px-3 py-1.5 rounded shadow transition-colors" title="新建 (Ctrl+N)">📄 新建</button>
+                    <button onClick={onImportClick} className="bg-gray-600 hover:bg-gray-700 text-white text-xs px-3 py-1.5 rounded shadow transition-colors" title="打开 (Ctrl+O)">📂 打开</button>
+                    <button onClick={onExport} className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded shadow transition-colors" title="保存 (Ctrl+S)">💾 保存</button>
+                    <button onClick={onExport} className="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-1.5 rounded shadow transition-colors" title="另存为...">💾 另存为...</button>
+                    <button onClick={onLoadPkgClick} className="bg-gray-600 hover:bg-gray-700 text-white text-xs px-3 py-1.5 rounded shadow transition-colors" title="加载功能包">📦</button>
+                    <div className="w-px bg-gray-400 mx-1" />
+                    <button onClick={onGenerate} className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1.5 rounded shadow transition-colors" title="生成代码 (Ctrl+G)">⚡ 生成</button>
+                    <button onClick={() => setShowCode(v => !v)} className="bg-gray-600 hover:bg-gray-700 text-white text-xs px-3 py-1.5 rounded shadow transition-colors" title="切换代码面板 (Ctrl+`)">{showCode ? '🙈' : '👁'}</button>
                 </div>
                 <input
                     ref={fileRef}
