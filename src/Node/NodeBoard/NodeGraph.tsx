@@ -45,16 +45,7 @@ const edgeTypes: EdgeTypes = {
 };
 
 // ── 解析 funcList 动态生成 nodeTypes ──
-const allApps = parseAllFuncLists();
-const dynamicNodeTypes: Record<string, any> = {};
-for (const app of allApps) {
-    for (const func of app.functions) {
-        const nt = makeNodeType(app.folder, func.funcName);
-        dynamicNodeTypes[nt] = FuncNode;
-    }
-}
-
-const nodeTypes = {
+const baseNodeTypes = {
     BSDFNode,
     Vector3Node,
     Vector1Node,
@@ -71,7 +62,6 @@ const nodeTypes = {
     SignalSubscriberNode,
     OpenSocketQuerierNode,
     OpenSocketResponserNode,
-    ...dynamicNodeTypes,
 };
 
 const STORAGE_KEY = 'nodegraph-workspace';
@@ -127,9 +117,22 @@ const saved = loadWorkspace();
 export default function NodeGraph() {
     const [nodes, setNodes] = useState<Node[]>(saved.nodes);
     const [edges, setEdges] = useState<Edge[]>(saved.edges);
+    const [appVersion, setAppVersion] = useState(0);
     const edgeReconnectSuccessful = useRef(true);
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
     const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
+
+    // 动态计算 nodeTypes（appVersion 变化时重新计算）
+    const nodeTypes = useMemo(() => {
+        const all = parseAllFuncLists();
+        const dyn: Record<string, any> = {};
+        for (const app of all) {
+            for (const func of app.functions) {
+                dyn[makeNodeType(app.folder, func.funcName)] = FuncNode;
+            }
+        }
+        return { ...baseNodeTypes, ...dyn };
+    }, [appVersion]);
 
     const onNodesChange = useCallback(
         (changes: any) => setNodes((ns) => applyNodeChanges(changes, ns)),
@@ -279,11 +282,59 @@ export default function NodeGraph() {
                     registerDynamicApp(folder, funcList);
                 }
             }
+            setAppVersion(v => v + 1);
             if (project.errors.length > 0) {
                 console.warn('KLN 导入警告:', project.errors);
             }
         } catch (err: any) {
             alert(`导入失败: ${err.message}`);
+        }
+        e.target.value = '';
+    }, []);
+
+    // 加载功能包（仅添加 app 定义，不替换工作区）
+    const pkgRef = useRef<HTMLInputElement>(null);
+    const onLoadPkgClick = useCallback(() => {
+        pkgRef.current?.click();
+    }, []);
+    const onLoadPkgFile = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        try {
+            if (file.name.endsWith('.kln')) {
+                // .kln 中只提取 apps
+                const project = await unpackKLN(file);
+                let count = 0;
+                if (project.apps) {
+                    for (const [folder, funcList] of Object.entries(project.apps)) {
+                        if (registerDynamicApp(folder, funcList)) count++;
+                    }
+                }
+                setAppVersion(v => v + 1);
+                alert(`已加载 ${count} 个功能包`);
+            } else if (file.name.endsWith('.json')) {
+                // FuncList.json 直接注册
+                const raw = JSON.parse(await new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result as string);
+                    reader.onerror = reject;
+                    reader.readAsText(file);
+                }));
+                // 用 appName 做 folder，去除特殊字符
+                const folder = (raw.appName || file.name)
+                    .replace(/\.json$/i, '')
+                    .replace(/[^a-zA-Z0-9一-鿿_-]/g, '_');
+                if (registerDynamicApp(folder, raw)) {
+                    setAppVersion(v => v + 1);
+                    alert(`已加载: ${raw.appName ?? folder}`);
+                } else {
+                    alert('功能包为空');
+                }
+            } else {
+                alert('请选择 .kln 或 .json 文件');
+            }
+        } catch (err: any) {
+            alert(`加载失败: ${err.message}`);
         }
         e.target.value = '';
     }, []);
@@ -339,9 +390,16 @@ export default function NodeGraph() {
                     <button
                         onClick={onImportClick}
                         className="bg-orange-500 hover:bg-orange-600 text-white text-xs px-3 py-2 rounded-lg shadow-lg transition-colors"
-                        title="从 JSON 文件导入工程"
+                        title="从 .kln 文件导入完整工程"
                     >
                         📥 导入
+                    </button>
+                    <button
+                        onClick={onLoadPkgClick}
+                        className="bg-purple-500 hover:bg-purple-600 text-white text-xs px-3 py-2 rounded-lg shadow-lg transition-colors"
+                        title="加载功能包 FuncList.json（不覆盖工作区）"
+                    >
+                        📦 加载
                     </button>
                     <button
                         onClick={onReset}
@@ -354,8 +412,15 @@ export default function NodeGraph() {
                 <input
                     ref={fileRef}
                     type="file"
-                    accept=".json"
+                    accept=".kln"
                     onChange={onImportFile}
+                    className="hidden"
+                />
+                <input
+                    ref={pkgRef}
+                    type="file"
+                    accept=".kln,.json"
+                    onChange={onLoadPkgFile}
                     className="hidden"
                 />
             </div>
