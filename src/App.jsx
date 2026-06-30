@@ -7,8 +7,8 @@ export default function App() {
   return (
     <div className="w-screen h-screen flex flex-col">
       <MenuBar />
-      <div className="flex-1 flex">
-        <div className="w-1/5 h-full">
+      <div className="flex-1 flex overflow-hidden">
+        <div className="w-60 h-full shrink-0 overflow-y-auto">
           <NavBar />
         </div>
         <div className="flex-1 h-full">
