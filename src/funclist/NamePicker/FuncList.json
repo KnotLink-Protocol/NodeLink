@@ -21,9 +21,9 @@
                 }
             },
             "returns": [
-                ["name", "学生姓名"],
-                ["no", "学号"],
-                ["sex", "性别"]
+                ["学生姓名", "name"],
+                ["学号", "no"],
+                ["性别", "sex"]
             ]
         },
         "multiple": {
@@ -92,7 +92,7 @@
                 }
             },
             "returns": [
-                ["data", "JSON 字符串，包含 name, sex, no 字段的数组"]
+                ["JSON 字符串(含 name/sex/no 数组)", "data"]
             ]
         },
         "add_name": {

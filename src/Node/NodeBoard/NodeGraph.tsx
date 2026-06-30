@@ -1,4 +1,4 @@
-﻿import React, {useState, useCallback, useRef} from 'react';
+import React, {useState, useCallback, useRef, useMemo} from 'react';
 import {
     ReactFlow,
     ReactFlowProvider,
@@ -30,6 +30,8 @@ import SignalSenderNode from '../KnotLink/SignalSenderNode';
 import SignalSubscriberNode from '../KnotLink/SignalSubscriberNode';
 import OpenSocketQuerierNode from '../KnotLink/OpenSocketQuerierNode';
 import OpenSocketResponserNode from '../KnotLink/OpenSocketResponserNode';
+import FuncNode from '../FuncNode/FuncNode';
+import { parseAllFuncLists, parseNodeType, makeNodeType } from '../../utils/funcListParser';
 import { generatePython } from '../../utils/codeGenerator';
 
 const connectionLineStyle = {stroke: 'black'};
@@ -40,6 +42,16 @@ const edgeOptions = {
 const edgeTypes: EdgeTypes = {
     edgeButton: EdgeWithButton,
 };
+
+// ── 解析 funcList 动态生成 nodeTypes ──
+const allApps = parseAllFuncLists();
+const dynamicNodeTypes: Record<string, any> = {};
+for (const app of allApps) {
+    for (const func of app.functions) {
+        const nt = makeNodeType(app.folder, func.funcName);
+        dynamicNodeTypes[nt] = FuncNode;
+    }
+}
 
 const nodeTypes = {
     BSDFNode,
@@ -58,68 +70,59 @@ const nodeTypes = {
     SignalSubscriberNode,
     OpenSocketQuerierNode,
     OpenSocketResponserNode,
+    ...dynamicNodeTypes,
 };
-
 
 export default function NodeGraph() {
     const [nodes, setNodes] = useState<Node[]>([
+        // ── 示例: Everything 搜索 → 消息通知 ──
         {
-            id: 'val-msg', type: 'ValueNode',
-            position: {x: 0, y: 30},
-            data: {value: '"你好 KnotLink"', label: 'msg'},
+            id: 'ev-search',
+            type: makeNodeType('Everything_node', 'search'),
+            position: {x: 10, y: 30},
+            data: {
+                folder: 'Everything_node',
+                funcName: 'search',
+                argValues: { function: 'search', query: '*.txt', max_results: '10' },
+            },
         },
         {
-            id: 'sender', type: 'SignalSenderNode',
-            position: {x: 200, y: 30},
-            data: {appId: 'DemoApp', signalId: 'greeting'},
+            id: 'msg-show',
+            type: makeNodeType('MsgNotification', 'ShowMsg'),
+            position: {x: 330, y: 30},
+            data: {
+                folder: 'MsgNotification',
+                funcName: 'ShowMsg',
+                argValues: { msgContext: '搜索结果来了!' },
+            },
+        },
+        // ── 示例: 点名 → TTS 播报 ──
+        {
+            id: 'np-pick',
+            type: makeNodeType('NamePicker', 'pick'),
+            position: {x: 10, y: 280},
+            data: {
+                folder: 'NamePicker',
+                funcName: 'pick',
+                argValues: { action: 'pick', type: 'single' },
+            },
         },
         {
-            id: 'subscriber', type: 'SignalSubscriberNode',
-            position: {x: 500, y: 30},
-            data: {appId: 'DemoApp', signalId: 'greeting'},
-        },
-        {
-            id: 'print', type: 'PrintNode',
-            position: {x: 750, y: 30},
-            data: {},
-        },
-        // 第二行: Querier/Responser 请求-响应
-        {
-            id: 'val-req', type: 'ValueNode',
-            position: {x: 0, y: 220},
-            data: {value: '"ping"', label: 'req'},
-        },
-        {
-            id: 'querier', type: 'OpenSocketQuerierNode',
-            position: {x: 220, y: 220},
-            data: {appId: 'DemoApp', socketId: 'echo'},
-        },
-        {
-            id: 'print-resp', type: 'PrintNode',
-            position: {x: 470, y: 220},
-            data: {},
-        },
-        {
-            id: 'responser', type: 'OpenSocketResponserNode',
-            position: {x: 220, y: 390},
-            data: {appId: 'DemoApp', socketId: 'echo'},
-        },
-        {
-            id: 'val-reply', type: 'ValueNode',
-            position: {x: 0, y: 390},
-            data: {value: '"pong"', label: 'reply'},
+            id: 'tts-edge',
+            type: makeNodeType('MultiTTS_Client', 'EdgeTTS'),
+            position: {x: 330, y: 280},
+            data: {
+                folder: 'MultiTTS_Client',
+                funcName: 'EdgeTTS',
+                argValues: { TTS: 'EdgeTTS', text: '张三同学', rate: '+0%', volume: '+0%', voice: 'zh-CN-XiaoxiaoNeural' },
+            },
         },
     ]);
     const [edges, setEdges] = useState<Edge[]>([
-        // ── 上半部分: 信号 Pub/Sub ──
-        {id: 'val-sender', source: 'val-msg', target: 'sender', targetHandle: 'i-data'},
-        {id: 'sub-print', source: 'subscriber', target: 'print', targetHandle: 'i-print'},
-
-        // ── 下半部分: 请求-响应 ──
-        {id: 'val-querier', source: 'val-req', target: 'querier', targetHandle: 'i-query'},
-        {id: 'querier-print', source: 'querier', target: 'print-resp', targetHandle: 'i-print'},
-        // Responser 接收请求后,用 val-reply 的数据作为回复
-        {id: 'val-resp', source: 'val-reply', target: 'responser', targetHandle: 'i-request'},
+        // Everything search → files 输出 → 消息通知 msgContext
+        {id: 'ev-msg', source: 'ev-search', sourceHandle: 'o-files', target: 'msg-show', targetHandle: 'i-msgContext'},
+        // NamePicker pick → name 输出 → TTS text
+        {id: 'np-tts', source: 'np-pick', sourceHandle: 'o-name', target: 'tts-edge', targetHandle: 'i-text'},
     ]);
     const edgeReconnectSuccessful = useRef(true);
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
@@ -143,12 +146,12 @@ export default function NodeGraph() {
         edgeReconnectSuccessful.current = false;
     }, []);
 
-    const onReconnect = useCallback((oldEdge, newConnection) => {
+    const onReconnect = useCallback((oldEdge: any, newConnection: any) => {
         edgeReconnectSuccessful.current = true;
         setEdges((els) => reconnectEdge(oldEdge, newConnection, els));
     }, []);
 
-    const onReconnectEnd = useCallback((_, edge) => {
+    const onReconnectEnd = useCallback((_: any, edge: any) => {
         if (!edgeReconnectSuccessful.current) {
             setEdges((eds) => eds.filter((e) => e.id !== edge.id));
         }
@@ -179,11 +182,17 @@ export default function NodeGraph() {
                 y: event.clientY - reactFlowBounds.top,
             });
 
+            // 解析 funcList 类型
+            const parsed = parseNodeType(type);
+            const nodeData: any = parsed
+                ? { folder: parsed.folder, funcName: parsed.funcName, argValues: {} }
+                : (type === 'BSDFNode' ? { value: '#ffff11' } : {});
+
             const newNode = {
                 id: `${type}-${Date.now()}`,
                 type,
                 position,
-                data: type === 'BSDFNode' ? {value: '#ffff11'} : {},
+                data: nodeData,
             };
 
             setNodes((nds) => nds.concat(newNode));
@@ -204,7 +213,6 @@ export default function NodeGraph() {
 
     return (
         <div className="h-full w-full flex flex-col" ref={reactFlowWrapper}>
-            {/* 画布区域 */}
             <div className="flex-1 relative">
                 <ReactFlowProvider>
                     <ReactFlow
@@ -235,7 +243,6 @@ export default function NodeGraph() {
                         <Controls/>
                     </ReactFlow>
                 </ReactFlowProvider>
-                {/* 生成按钮 - 悬浮在右上角 */}
                 <button
                     onClick={onGenerate}
                     className="absolute top-3 right-3 z-10 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow-lg transition-colors"
@@ -243,16 +250,13 @@ export default function NodeGraph() {
                     ⚡ 生成 Python 代码
                 </button>
             </div>
-            {/* 底部代码面板 */}
             {showCode && (
                 <div className="h-1/4 max-h-64 border-t border-gray-300 bg-gray-900 flex flex-col">
                     <div className="flex items-center justify-between px-4 py-1.5 bg-gray-800">
                         <span className="text-gray-300 text-xs font-mono">生成的 Python 代码</span>
                         <div className="flex gap-2">
                             <button
-                                onClick={() => {
-                                    navigator.clipboard.writeText(pyCode);
-                                }}
+                                onClick={() => { navigator.clipboard.writeText(pyCode); }}
                                 className="text-gray-400 hover:text-white text-xs px-2 py-0.5 rounded border border-gray-600 hover:border-gray-400 transition-colors"
                             >
                                 📋 复制
@@ -273,4 +277,3 @@ export default function NodeGraph() {
         </div>
     );
 }
-
