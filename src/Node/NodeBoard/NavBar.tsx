@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { parseAllFuncLists, makeNodeType, type AppDefinition } from '../../utils/funcListParser';
 
 const knotLinkNodes = [
@@ -48,7 +48,15 @@ function CollapseSection({ title, icon, defaultOpen = true, children }: {
 }
 
 export default function NavBar() {
-  const apps = useMemo(() => parseAllFuncLists(), []);
+  // 因为 dynamic apps 可能变化，不用 useMemo 缓存
+  const [, forceUpdate] = useState(0);
+  const apps = parseAllFuncLists();
+
+  useEffect(() => {
+    const handler = () => forceUpdate(v => v + 1);
+    window.addEventListener('apps-changed', handler);
+    return () => window.removeEventListener('apps-changed', handler);
+  }, []);
 
   const onDragStart = (event: React.DragEvent, nodeType: string) => {
     event.dataTransfer.setData('application/reactflow', nodeType);

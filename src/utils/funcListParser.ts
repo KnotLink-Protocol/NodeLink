@@ -185,11 +185,18 @@ export function registerDynamicApp(folder: string, raw: any): AppDefinition | nu
     functions,
   };
   dynamicApps.push(app);
+  bumpVersion();
   return app;
 }
 
+// 全局版本号：dynamic apps 变化时自增，NavBar 依赖它刷新
+let _appVersion = 0;
+export function getAppVersion(): number { return _appVersion; }
+function bumpVersion() { _appVersion++; window.dispatchEvent(new Event('apps-changed')); }
+
 export function clearDynamicApps() {
   dynamicApps.length = 0;
+  bumpVersion();
 }
 
 export function getDynamicApps(): AppDefinition[] {
