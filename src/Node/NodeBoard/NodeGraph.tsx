@@ -34,7 +34,6 @@ import FuncNode from '../FuncNode/FuncNode';
 import { parseAllFuncLists, parseNodeType, makeNodeType, registerDynamicApp, clearDynamicApps, getDynamicApps } from '../../utils/funcListParser';
 import { generatePython } from '../../utils/codeGenerator';
 import { packKLN, unpackKLN } from '../../utils/klnPack';
-import { useDragContext } from '../../utils/dragContext';
 
 const connectionLineStyle = {stroke: 'black'};
 const edgeOptions = {
@@ -165,33 +164,34 @@ export default function NodeGraph() {
         edgeReconnectSuccessful.current = true;
     }, []);
 
-    const { state: d, moveDrag, endDrag } = useDragContext();
-
-    const onCanvasMouseMove = useCallback((e: React.MouseEvent) => {
-        if (!d.dragging) return;
-        moveDrag(e);
-    }, [d.dragging, moveDrag]);
-
-    const onCanvasMouseUp = useCallback((e: React.MouseEvent) => {
-        if (!d.dragging) return;
-        const rect = reactFlowWrapper.current?.getBoundingClientRect() ?? null;
-        const result = endDrag(rect,
-            reactFlowInstance
-                ? (pos: { x: number; y: number }) => reactFlowInstance.screenToFlowPosition(pos)
-                : null,
-        );
-        if (!result) return;
-        const parsed = parseNodeType(result.nodeType);
-        const nodeData: any = parsed
-            ? { folder: parsed.folder, funcName: parsed.funcName, argValues: {} }
-            : (result.nodeType === 'BSDFNode' ? { value: '#ffff11' } : {});
-        setNodes((nds) => nds.concat([{
-            id: `${result.nodeType}-${Date.now()}`,
-            type: result.nodeType,
-            position: result.position,
-            data: nodeData,
-        }]));
-    }, [d.dragging, endDrag, reactFlowInstance]);
+    const onDragOver = useCallback((event: React.DragEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+        event.dataTransfer.dropEffect = 'move';
+    }, []);
+    const onDrop = useCallback(
+        (event: React.DragEvent) => {
+            event.preventDefault();
+            const type = event.dataTransfer.getData('application/reactflow');
+            if (!type || !reactFlowWrapper.current || !reactFlowInstance) return;
+            const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect();
+            const position = reactFlowInstance.screenToFlowPosition({
+                x: event.clientX - reactFlowBounds.left,
+                y: event.clientY - reactFlowBounds.top,
+            });
+            const parsed = parseNodeType(type);
+            const nodeData: any = parsed
+                ? { folder: parsed.folder, funcName: parsed.funcName, argValues: {} }
+                : (type === 'BSDFNode' ? { value: '#ffff11' } : {});
+            setNodes((nds) => nds.concat([{
+                id: `${type}-${Date.now()}`,
+                type,
+                position,
+                data: nodeData,
+            }]));
+        },
+        [reactFlowInstance],
+    );
 
     const [pyCode, setPyCode] = useState<string>('');
     const [showCode, setShowCode] = useState(false);
@@ -343,8 +343,8 @@ export default function NodeGraph() {
                         onReconnectEnd={onReconnectEnd}
                         onConnect={onConnect}
                         onInit={setReactFlowInstance}
-                        onMouseMove={onCanvasMouseMove}
-                        onMouseUp={onCanvasMouseUp}
+                        onDrop={onDrop}
+                        onDragOver={onDragOver}
                         fitView
                         snapToGrid
                         deleteKeyCode={['Delete', 'Backspace']}

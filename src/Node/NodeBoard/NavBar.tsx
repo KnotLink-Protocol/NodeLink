@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { parseAllFuncLists, makeNodeType, getDynamicApps, clearDynamicApps, unregisterDynamicApp, type AppDefinition } from '../../utils/funcListParser';
-import { useDragContext } from '../../utils/dragContext';
 
 const knotLinkNodes = [
   { name: '信号发送', type: 'SignalSenderNode', color: 'bg-yellow-500' },
@@ -59,9 +58,9 @@ export default function NavBar() {
     return () => window.removeEventListener('apps-changed', handler);
   }, []);
 
-  const { startDrag } = useDragContext();
-  const onNodeMouseDown = (nodeType: string) => (e: React.MouseEvent) => {
-    startDrag(nodeType, e);
+  const onDragStart = (event: React.DragEvent, nodeType: string) => {
+    event.dataTransfer.setData('application/reactflow', nodeType);
+    event.dataTransfer.effectAllowed = 'move';
   };
 
   return (
@@ -79,7 +78,8 @@ export default function NavBar() {
               return (
                 <div
                   key={nodeType}
-                  onMouseDown={onNodeMouseDown(nodeType)}
+                  draggable
+                  onDragStart={(e) => onDragStart(e, nodeType)}
                   className="bg-white rounded-lg shadow-sm border border-gray-200 px-2.5 py-2 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-gray-300 transition-all duration-200"
                   title={func.description}
                 >
