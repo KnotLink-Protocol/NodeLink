@@ -1,4 +1,18 @@
 use std::fs;
+use std::sync::Mutex;
+
+static STARTUP_FILE: Mutex<Option<String>> = Mutex::new(None);
+
+#[tauri::command]
+fn get_startup_file() -> Option<String> {
+    STARTUP_FILE.lock().unwrap().clone()
+}
+
+#[tauri::command]
+fn read_startup_file() -> Option<Vec<u8>> {
+    let path = STARTUP_FILE.lock().unwrap().clone()?;
+    fs::read(&path).ok()
+}
 
 #[tauri::command]
 fn get_funclists() -> Vec<serde_json::Value> {
@@ -28,11 +42,25 @@ fn get_funclists() -> Vec<serde_json::Value> {
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
+pub fn run(args: Vec<String>) {
+  // 记录所有参数到日志文件
+  let log_path = std::env::current_exe()
+    .unwrap_or_default()
+    .parent()
+    .unwrap_or(std::path::Path::new("."))
+    .join("knotlink_startup.log");
+  let _ = fs::write(&log_path, format!("args: {:?}\n", args));
+
+  // 拖拽/双击打开的文件路径
+  if let Some(path) = args.into_iter().find(|a| a.ends_with(".kln")) {
+    let _ = fs::write(&log_path, format!("found kln: {}\n", path));
+    *STARTUP_FILE.lock().unwrap() = Some(path);
+  }
+
   tauri::Builder::default()
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_fs::init())
-    .invoke_handler(tauri::generate_handler![get_funclists])
+    .invoke_handler(tauri::generate_handler![get_funclists, get_startup_file, read_startup_file])
     .setup(|app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(

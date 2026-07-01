@@ -68,45 +68,8 @@ const baseNodeTypes = {
 
 const STORAGE_KEY = 'nodegraph-workspace';
 
-const DEFAULT_NODES: Node[] = [
-    {
-        id: 'ev-search',
-        type: makeNodeType('Everything_node', 'search'),
-        position: {x: 10, y: 30},
-        data: { folder: 'Everything_node', funcName: 'search', argValues: { function: 'search', query: '*.txt', max_results: '10' } },
-    },
-    {
-        id: 'msg-show',
-        type: makeNodeType('MsgNotification', 'ShowMsg'),
-        position: {x: 330, y: 30},
-        data: { folder: 'MsgNotification', funcName: 'ShowMsg', argValues: { msgContext: '搜索结果来了!' } },
-    },
-    {
-        id: 'np-pick',
-        type: makeNodeType('NamePicker', 'pick'),
-        position: {x: 10, y: 280},
-        data: { folder: 'NamePicker', funcName: 'pick', argValues: { action: 'pick', type: 'single' } },
-    },
-    {
-        id: 'tts-edge',
-        type: makeNodeType('MultiTTS_Client', 'EdgeTTS'),
-        position: {x: 330, y: 280},
-        data: { folder: 'MultiTTS_Client', funcName: 'EdgeTTS', argValues: { TTS: 'EdgeTTS', text: '张三同学', rate: '+0%', volume: '+0%', voice: 'zh-CN-XiaoxiaoNeural' } },
-    },
-];
-
-const DEFAULT_EDGES: Edge[] = [
-    {id: 'ev-msg', source: 'ev-search', sourceHandle: 'o-files', target: 'msg-show', targetHandle: 'i-msgContext'},
-    {id: 'np-tts', source: 'np-pick', sourceHandle: 'o-name', target: 'tts-edge', targetHandle: 'i-text'},
-];
-
-function loadWorkspace(): { nodes: Node[]; edges: Edge[] } {
-    try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) return JSON.parse(raw);
-    } catch {}
-    return { nodes: DEFAULT_NODES, edges: DEFAULT_EDGES };
-}
+const DEFAULT_NODES: Node[] = [];
+const DEFAULT_EDGES: Edge[] = [];
 
 function saveWorkspace(nodes: Node[], edges: Edge[]) {
     try {
@@ -114,11 +77,9 @@ function saveWorkspace(nodes: Node[], edges: Edge[]) {
     } catch {}
 }
 
-const saved = loadWorkspace();
-
 export default function NodeGraph() {
-    const [nodes, setNodes] = useState<Node[]>(saved.nodes);
-    const [edges, setEdges] = useState<Edge[]>(saved.edges);
+    const [nodes, setNodes] = useState<Node[]>(DEFAULT_NODES);
+    const [edges, setEdges] = useState<Edge[]>(DEFAULT_EDGES);
     const [appVersion, setAppVersion] = useState(0);
     const edgeReconnectSuccessful = useRef(true);
     const reactFlowWrapper = useRef<HTMLDivElement>(null);
@@ -206,9 +167,29 @@ export default function NodeGraph() {
         setShowCode(true);
     }, [nodes, edges]);
 
-    // Tauri: 启动时从 exe 目录加载 funclist/
+    // Tauri: 启动时加载 funclist + 打开拖入的文件
     useEffect(() => {
-        loadTauriFuncLists().then(() => setAppVersion(v => v + 1));
+        (async () => {
+            await loadTauriFuncLists();
+            setAppVersion(v => v + 1);
+            // 检查是否有拖入/双击打开的文件
+            try {
+                const { invoke } = await import('@tauri-apps/api/core');
+                const path: string | null = await invoke('get_startup_file');
+                if (path) {
+                    const data: number[] = await invoke('read_startup_file');
+                    if (data) {
+                        const uint8 = new Uint8Array(data);
+                        const project = await unpackKLN(new File([new Blob([uint8])], path));
+                        setNodes(project.workspace.nodes); setEdges(project.workspace.edges);
+                        setCurrentFile(path.replace(/\\/g, '/')); setModified(false);
+                        setPyCode(project.code?.python ?? ''); setShowCode(!!project.code?.python);
+                        setAppVersion(v => v + 1);
+                        localStorage.removeItem(STORAGE_KEY);
+                    }
+                }
+            } catch (e) { console.error('[startup]', e); alert('打开文件失败: ' + String(e)); }
+        })();
     }, []);
 
     // 自动保存 localStorage + 标记修改
@@ -257,6 +238,8 @@ setAppVersion(v => v + 1);
         return await packKLN({ version: 1, name: 'KnotLink 工程', workspace: { nodes, edges }, code: { python: code }, apps: Object.keys(aps).length > 0 ? aps : undefined });
     }, [nodes, edges]);
 
+    const norm = (p: string) => p.replace(/\\/g, '/');
+
     // ── 保存 ──
     const onSave = useCallback(async () => {
         try {
@@ -265,13 +248,13 @@ setAppVersion(v => v + 1);
                 savePath = await save({ filters: [{ name: 'KnotLink', extensions: ['kln'] }] });
                 if (!savePath) return;
             }
+            savePath = norm(savePath);
             const blob = await buildKLN();
             const buf = new Uint8Array(await blob.arrayBuffer());
             await writeFile(savePath, buf);
             setCurrentFile(savePath);
             setModified(false);
         } catch (err: any) {
-            console.error('save error:', err);
             alert(`保存失败: ${err?.message || err}`);
         }
     }, [buildKLN, currentFile]);
@@ -279,7 +262,7 @@ setAppVersion(v => v + 1);
     // ── 另存为 ──
     const onSaveAs = useCallback(async () => {
         try {
-            const savePath = await save({ filters: [{ name: 'KnotLink', extensions: ['kln'] }] });
+            const savePath = norm(await save({ filters: [{ name: 'KnotLink', extensions: ['kln'] }] }) || '');
             if (!savePath) return;
             const blob = await buildKLN();
             const buf = new Uint8Array(await blob.arrayBuffer());
@@ -287,7 +270,6 @@ setAppVersion(v => v + 1);
             setCurrentFile(savePath);
             setModified(false);
         } catch (err: any) {
-            console.error('save error:', err);
             alert(`保存失败: ${err?.message || err}`);
         }
     }, [buildKLN]);
@@ -298,7 +280,7 @@ setAppVersion(v => v + 1);
         try {
             const selected = await open({ filters: [{ name: 'KnotLink 工程', extensions: ['kln'] }], multiple: false });
             if (!selected) return;
-            const fp = typeof selected === 'string' ? selected : selected.path;
+            const fp = (typeof selected === 'string' ? selected : selected.path).replace(/\\/g, '/');
             const data = await readFile(fp);
             const project = await unpackKLN(new File([new Blob([data])], fp));
             setNodes(project.workspace.nodes); setEdges(project.workspace.edges);
@@ -393,7 +375,7 @@ setAppVersion(v => v + 1);
                 </ReactFlowProvider>
                 {/* ── 文件名 ── */}
                 <div className="absolute top-3 left-3 z-10 bg-white/80 backdrop-blur text-gray-700 text-xs px-3 py-1.5 rounded shadow">
-                    {currentFile || '未命名工程.kln'}{modified ? ' *' : ''}
+                    {(currentFile ? currentFile.replace(/\\/g, '/').split('/').pop() : '未命名工程.kln')}{modified ? ' *' : ''}
                 </div>
                 {/* ── 工具栏 ── */}
                 <div className="absolute top-3 right-3 z-10 flex gap-2">
