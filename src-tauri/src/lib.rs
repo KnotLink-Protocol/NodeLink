@@ -15,6 +15,11 @@ fn read_startup_file() -> Option<Vec<u8>> {
 }
 
 #[tauri::command]
+fn write_file(path: String, data: Vec<u8>) -> Result<(), String> {
+    fs::write(&path, &data).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 fn get_funclists() -> Vec<serde_json::Value> {
     let exe_dir = std::env::current_exe()
         .ok()
@@ -60,7 +65,7 @@ pub fn run(args: Vec<String>) {
   tauri::Builder::default()
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_fs::init())
-    .invoke_handler(tauri::generate_handler![get_funclists, get_startup_file, read_startup_file])
+    .invoke_handler(tauri::generate_handler![get_funclists, get_startup_file, read_startup_file, write_file])
     .setup(|app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(

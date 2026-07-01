@@ -157,7 +157,8 @@ export default function NodeGraph() {
     );
 
     const [pyCode, setPyCode] = useState<string>('');
-    const [currentFile, setCurrentFile] = useState<string | null>(null);
+    const [currentFile, setCurrentFile] = useState<string | null>(null);  // 保存路径（有写权限）
+    const [displayName, setDisplayName] = useState<string | null>(null);  // 显示名称
     const [modified, setModified] = useState(false);
     const [showCode, setShowCode] = useState(false);
 
@@ -182,7 +183,10 @@ export default function NodeGraph() {
                         const uint8 = new Uint8Array(data);
                         const project = await unpackKLN(new File([new Blob([uint8])], path));
                         setNodes(project.workspace.nodes); setEdges(project.workspace.edges);
-                        setCurrentFile(path.replace(/\\/g, '/')); setModified(false);
+                        const fp_norm = path.replace(/\\/g, '/');
+                        setCurrentFile(fp_norm);
+                        setDisplayName(fp_norm.split('/').pop() || null);
+                        setModified(false);
                         setPyCode(project.code?.python ?? ''); setShowCode(!!project.code?.python);
                         setAppVersion(v => v + 1);
                         localStorage.removeItem(STORAGE_KEY);
@@ -207,6 +211,7 @@ export default function NodeGraph() {
         setPyCode('');
         setShowCode(false);
         setCurrentFile(null);
+        setDisplayName(null);
         setModified(false);
         setAppVersion(v => v + 1);
     }, [nodes]);
@@ -240,6 +245,16 @@ setAppVersion(v => v + 1);
 
     const norm = (p: string) => p.replace(/\\/g, '/');
 
+    // ── 写入文件（先试 JS API，失败用 Rust 命令）──
+    const writeFileSafe = async (path: string, buf: Uint8Array) => {
+        try {
+            await writeFile(path, buf);
+        } catch {
+            const { invoke } = await import('@tauri-apps/api/core');
+            await invoke('write_file', { path, data: Array.from(buf) });
+        }
+    };
+
     // ── 保存 ──
     const onSave = useCallback(async () => {
         try {
@@ -251,8 +266,9 @@ setAppVersion(v => v + 1);
             savePath = norm(savePath);
             const blob = await buildKLN();
             const buf = new Uint8Array(await blob.arrayBuffer());
-            await writeFile(savePath, buf);
+            await writeFileSafe(savePath, buf);
             setCurrentFile(savePath);
+            setDisplayName(savePath.split('/').pop() || null);
             setModified(false);
         } catch (err: any) {
             alert(`保存失败: ${err?.message || err}`);
@@ -266,8 +282,9 @@ setAppVersion(v => v + 1);
             if (!savePath) return;
             const blob = await buildKLN();
             const buf = new Uint8Array(await blob.arrayBuffer());
-            await writeFile(savePath, buf);
+            await writeFileSafe(savePath, buf);
             setCurrentFile(savePath);
+            setDisplayName(savePath.split('/').pop() || null);
             setModified(false);
         } catch (err: any) {
             alert(`保存失败: ${err?.message || err}`);
@@ -284,7 +301,7 @@ setAppVersion(v => v + 1);
             const data = await readFile(fp);
             const project = await unpackKLN(new File([new Blob([data])], fp));
             setNodes(project.workspace.nodes); setEdges(project.workspace.edges);
-            setCurrentFile(fp); setModified(false);
+            setCurrentFile(fp); setDisplayName(fp.split('/').pop() || null); setModified(false);
             setPyCode(project.code?.python ?? ''); setShowCode(!!project.code?.python);
             setAppVersion(v => v + 1);
         } catch {
@@ -296,7 +313,7 @@ setAppVersion(v => v + 1);
         try {
             const project = await unpackKLN(file);
             setNodes(project.workspace.nodes); setEdges(project.workspace.edges);
-            setCurrentFile(file.name); setModified(false);
+            setCurrentFile(file.name); setDisplayName(file.name); setModified(false);
             setPyCode(project.code?.python ?? ''); setShowCode(!!project.code?.python);
             setAppVersion(v => v + 1);
         } catch (err: any) { alert(`打开失败: ${err.message}`); }
@@ -375,7 +392,7 @@ setAppVersion(v => v + 1);
                 </ReactFlowProvider>
                 {/* ── 文件名 ── */}
                 <div className="absolute top-3 left-3 z-10 bg-white/80 backdrop-blur text-gray-700 text-xs px-3 py-1.5 rounded shadow">
-                    {(currentFile ? currentFile.replace(/\\/g, '/').split('/').pop() : '未命名工程.kln')}{modified ? ' *' : ''}
+                    {displayName || '未命名工程.kln'}{modified ? ' *' : ''}
                 </div>
                 {/* ── 工具栏 ── */}
                 <div className="absolute top-3 right-3 z-10 flex gap-2">
