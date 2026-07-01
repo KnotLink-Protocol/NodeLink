@@ -30,6 +30,10 @@ npm run tauri build  # 打包 exe
 - Tauri v2（桌面打包）
 - KnotLink SDK（Python / JavaScript）
 
+## 辅助开发
+
+本项目使用 [Claude Code](https://claude.ai/claude-code) (Anthropic) 作为 AI 编程辅助工具。
+
 ## 许可证
 
 MIT
