@@ -27,6 +27,13 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "resources": {
+      "../scripts/install.bat": "install.bat",
+      "../scripts/register-kln.bat": "register-kln.bat",
+      "../scripts/unregister-kln.bat": "unregister-kln.bat",
+      "icons/kln-file-48.png": "kln-file-48.png",
+      "icons/kln-file-256.png": "kln-file-256.png"
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
