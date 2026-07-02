@@ -6,9 +6,9 @@
 
 🧩 **拖拽连线** | 🐍 **生成 Python 代码** | 🖥️ **Tauri 桌面应用**
 
-[![GitHub Issues](https://img.shields.io/github/issues/KnotLink-Protocol/NodeLink?style=for-the-badge&color=3B82F6&logo=github)](https://github.com/KnotLink-Protocol/NodeLink/issues)
-[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](https://opensource.org/licenses/GPL-3.0)
-[![Last Commit](https://img.shields.io/github/last-commit/KnotLink-Protocol/NodeLink?style=for-the-badge&color=3B82F6)](https://github.com/KnotLink-Protocol/NodeLink/commits/master)
+![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue?style=for-the-badge)
+![Platform: Windows](https://img.shields.io/badge/Platform-Windows-3B82F6?style=for-the-badge)
+![Built with Tauri](https://img.shields.io/badge/Built%20with-Tauri-FFC131?style=for-the-badge&logo=tauri)
 
 </div>
 
