@@ -13,22 +13,24 @@
     </filter>
   </defs>
 
-  <rect x="56" y="56" width="400" height="400" rx="80" fill="url(#bg)" filter="url(#shadow)"/>
+  <g transform="translate(-30,-30) scale(1.15)">
+    <rect x="56" y="56" width="400" height="400" rx="80" fill="url(#bg)" filter="url(#shadow)"/>
 
-  <rect x="120" y="140" width="220" height="160" rx="24" fill="url(#card)" filter="url(#shadow)"/>
+    <rect x="120" y="140" width="220" height="160" rx="24" fill="url(#card)" filter="url(#shadow)"/>
 
-  <path d="M120 164 Q120 140 144 140 L316 140 Q340 140 340 164 L340 185 L120 185 Z" fill="#14B8A6"/>
+    <path d="M120 164 Q120 140 144 140 L316 140 Q340 140 340 164 L340 185 L120 185 Z" fill="#14B8A6"/>
 
-  <circle cx="135" cy="270" r="12" fill="#22C55E" stroke="#FFFFFF" stroke-width="3"/>
-  <circle cx="325" cy="220" r="12" fill="#A855F7" stroke="#FFFFFF" stroke-width="3"/>
+    <circle cx="135" cy="270" r="12" fill="#22C55E" stroke="#FFFFFF" stroke-width="3"/>
+    <circle cx="325" cy="220" r="12" fill="#A855F7" stroke="#FFFFFF" stroke-width="3"/>
 
-  <path d="M 147 270 C 200 270, 280 220, 313 220"
-        fill="none" stroke="#9CA3AF" stroke-width="3" stroke-linecap="round"/>
+    <path d="M 147 270 C 200 270, 280 220, 313 220"
+          fill="none" stroke="#9CA3AF" stroke-width="3" stroke-linecap="round"/>
 
-  <rect x="260" y="200" width="140" height="120" rx="18" fill="#FFFFFF" filter="url(#shadow)"/>
-  <path d="M260 218 Q260 200 278 200 L382 200 Q400 200 400 218 L400 235 L260 235 Z" fill="#8B5CF6"/>
+    <rect x="260" y="200" width="140" height="120" rx="18" fill="#FFFFFF" filter="url(#shadow)"/>
+    <path d="M260 218 Q260 200 278 200 L382 200 Q400 200 400 218 L400 235 L260 235 Z" fill="#8B5CF6"/>
 
-  <circle cx="273" cy="270" r="10" fill="#3B82F6" stroke="#FFFFFF" stroke-width="2.5"/>
+    <circle cx="273" cy="270" r="10" fill="#3B82F6" stroke="#FFFFFF" stroke-width="2.5"/>
 
-  <text x="236" y="173" font-family="system-ui,sans-serif" font-size="28" font-weight="700" fill="#FFFFFF" text-anchor="middle">Node</text>
+    <text x="236" y="173" font-family="system-ui,sans-serif" font-size="28" font-weight="700" fill="#FFFFFF" text-anchor="middle">Node</text>
+  </g>
 </svg>
