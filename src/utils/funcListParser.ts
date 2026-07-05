@@ -71,8 +71,25 @@ function nextColor(): string {
 // ── 应用注册表（唯一数据源）──
 const dynamicApps: AppDefinition[] = [];
 
+// 浏览器 dev 模式：从 funclist/ 静态导入
+const funcListModules = import.meta.glob<{ default: any }>(
+  "../../funclist/*/FuncList.json",
+  { eager: true },
+);
+
 export function parseAllFuncLists(): AppDefinition[] {
-  return [...dynamicApps];
+  const apps = [...dynamicApps];
+  // 浏览器：补充 glob 的静态 funclist
+  for (const [path, mod] of Object.entries(funcListModules)) {
+    const raw = mod.default;
+    if (!raw?.appName) continue;
+    const parts = path.split("/");
+    const folder = parts[parts.length - 2];
+    if (apps.some(a => a.folder === folder)) continue;
+    const app = parseAppDefinition(folder, raw);
+    if (app) apps.push(app);
+  }
+  return apps;
 }
 
 // Tauri: 从 exe 目录 funclist/ 加载

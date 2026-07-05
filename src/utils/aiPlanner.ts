@@ -32,7 +32,7 @@ function buildFuncListContext(): string {
   const parts: string[] = ['当前可用的功能节点：', ''];
 
   for (const app of apps) {
-    parts.push(`### ${app.appName}`);
+    parts.push(`### ${app.appName} (folder: "${app.folder}")`);
     for (const func of app.functions) {
       if (func.funcType === 'openSocket') {
         const f = func as OpenSocketFunc;
@@ -79,12 +79,12 @@ const SYSTEM_PROMPT = `你是一个自动化工作流编排助手。用户会用
 }
 
 规则：
-1. 节点横向排列（x递增），每个节点间隔约250px，y保持约100以内避免重叠
-2. 数据流连线：sourceHandle用"o-{字段名}"，targetHandle用"i-{参数名}"
-3. 触发流连线：sourceHandle用"o-trigger"，targetHandle用"i-trigger"
-4. 信号订阅节点作为起点时，不需要i-trigger输入
-5. 只使用上述可用节点列表中的功能
-6. 如果用户需求无法用现有节点实现，explanation中说明缺少什么
+1. folder 必须用上面节点列表里括号中的精确值，如"NamePicker"、"MultiTTS_Client"
+2. 节点横向排列（x递增），每个节点间隔约250px，y保持约100以内避免重叠
+3. 数据流连线：sourceHandle用"o-{字段名}"，targetHandle用"i-{参数名}"
+4. 触发流连线：sourceHandle用"o-trigger"，targetHandle用"i-trigger"
+5. 信号订阅节点作为起点时，不需要i-trigger输入
+6. 只使用上述可用节点列表中的功能
 7. 参数可选时，argValues可省略（使用默认值）`;
 
 // ── 调用 LLM ──
@@ -136,11 +136,17 @@ export function buildPlanNodesEdges(
 ): { nodes: Node[]; edges: Edge[] } {
   const apps = parseAllFuncLists();
 
-  const nodes: Node[] = plan.nodes.map((pn) => {
+  const validIds = new Set<string>();
+  const nodes: Node[] = [];
+  for (const pn of plan.nodes) {
     const app = apps.find(a => a.folder === pn.folder);
     const func = app?.functions.find(f => f.funcName === pn.funcName);
-
-    return {
+    if (!func) {
+      console.warn(`[AI] 跳过不存在的节点: ${pn.folder}/${pn.funcName}`);
+      continue;
+    }
+    validIds.add(pn.id);
+    nodes.push({
       id: pn.id,
       type: `funcList:${pn.folder}:${pn.funcName}`,
       position: { x: pn.x, y: pn.y },
@@ -149,18 +155,20 @@ export function buildPlanNodesEdges(
         funcName: pn.funcName,
         argValues: pn.argValues ?? {},
       },
-    };
-  });
+    });
+  }
 
-  const edges: Edge[] = plan.edges.map((pe, i) => ({
-    id: `${pe.source}-${pe.target}-${i}`,
-    source: pe.source,
-    sourceHandle: pe.sourceHandle,
-    target: pe.target,
-    targetHandle: pe.targetHandle,
-    type: pe.targetHandle === 'i-trigger' ? 'triggerEdge' : 'edgeButton',
-    animated: pe.targetHandle !== 'i-trigger',
-  }));
+  const edges: Edge[] = plan.edges
+    .filter(pe => validIds.has(pe.source) && validIds.has(pe.target))
+    .map((pe, i) => ({
+      id: `${pe.source}-${pe.target}-${i}`,
+      source: pe.source,
+      sourceHandle: pe.sourceHandle,
+      target: pe.target,
+      targetHandle: pe.targetHandle,
+      type: pe.targetHandle === 'i-trigger' ? 'triggerEdge' : 'edgeButton',
+      animated: pe.targetHandle !== 'i-trigger',
+    }));
 
   return { nodes, edges };
 }
@@ -185,6 +193,26 @@ export function loadAIConfig(): APIConfig | null {
   } catch { return null; }
 }
 
-export function saveAIConfig(config: APIConfig): void {
-  localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+export function saveAIConfig(config: any): void {
+  if (config === null) {
+    localStorage.removeItem(CONFIG_KEY);
+  } else {
+    localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+  }
+}
+
+// Tauri 启动时从 exe 旁边的 ai-config.json 加载（Rust 命令）
+export async function loadAIConfigFromFile(): Promise<APIConfig | null> {
+  try {
+    const { invoke } = await import('@tauri-apps/api/core');
+    const raw: string | null = await invoke('read_ai_config');
+    if (raw) {
+      const cfg = JSON.parse(raw);
+      if (cfg.endpoint && cfg.apiKey && cfg.model) {
+        saveAIConfig(cfg);
+        return cfg;
+      }
+    }
+  } catch { /* 非 Tauri 或无文件 */ }
+  return null;
 }

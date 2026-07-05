@@ -20,6 +20,14 @@ fn write_file(path: String, data: Vec<u8>) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn read_ai_config() -> Option<String> {
+    let exe_dir = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|d| d.join("ai-config.json")));
+    exe_dir.and_then(|p| fs::read_to_string(&p).ok())
+}
+
+#[tauri::command]
 fn get_funclists() -> Vec<serde_json::Value> {
     let exe_dir = std::env::current_exe()
         .ok()
@@ -65,7 +73,7 @@ pub fn run(args: Vec<String>) {
   tauri::Builder::default()
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_fs::init())
-    .invoke_handler(tauri::generate_handler![get_funclists, get_startup_file, read_startup_file, write_file])
+    .invoke_handler(tauri::generate_handler![get_funclists, get_startup_file, read_startup_file, write_file, read_ai_config])
     .setup(|app| {
       if cfg!(debug_assertions) {
         app.handle().plugin(

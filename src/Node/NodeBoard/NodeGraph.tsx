@@ -35,7 +35,7 @@ import FuncNode from '../FuncNode/FuncNode';
 import { parseAllFuncLists, parseNodeType, makeNodeType, registerDynamicApp, getDynamicApps, loadTauriFuncLists } from '../../utils/funcListParser';
 import { generatePython } from '../../utils/codeGenerator';
 import { packKLN, unpackKLN } from '../../utils/klnPack';
-import { planWorkflow, loadAIConfig, saveAIConfig } from '../../utils/aiPlanner';
+import { planWorkflow, loadAIConfig, saveAIConfig, loadAIConfigFromFile } from '../../utils/aiPlanner';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { writeFile, readFile } from '@tauri-apps/plugin-fs';
 
@@ -190,6 +190,9 @@ export default function NodeGraph() {
     const [aiPrompt, setAiPrompt] = useState('');
     const [aiLoading, setAiLoading] = useState(false);
     const [aiConfig, setAiConfig] = useState(() => loadAIConfig());
+
+    // 启动时从 exe 旁的 ai-config.json 加载
+    useEffect(() => { loadAIConfigFromFile().then(c => { if (c) setAiConfig(c); }); }, []);
     const [aiMsg, setAiMsg] = useState('');
 
     const onAIGenerate = useCallback(async () => {
@@ -451,22 +454,26 @@ setAppVersion(v => v + 1);
                     <button onClick={onGenerate} className="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1.5 rounded shadow transition-colors" title="生成代码 (Ctrl+G)">⚡ 生成</button>
                     <button onClick={() => setShowCode(v => !v)} className="bg-gray-600 hover:bg-gray-700 text-white text-xs px-3 py-1.5 rounded shadow transition-colors" title="切换代码面板 (Ctrl+`)">{showCode ? '🙈' : '👁'}</button>
                     <div className="w-px bg-gray-400 mx-1" />
-                    <button onClick={() => setAiOpen(!aiOpen)} className="bg-purple-600 hover:bg-purple-700 text-white text-xs px-3 py-1.5 rounded shadow transition-colors" title="AI 助手">🤖 AI</button>
+                    <button type="button" onClick={() => setAiOpen(!aiOpen)} className="bg-purple-600 hover:bg-purple-700 text-white text-xs px-3 py-1.5 rounded shadow transition-colors" title="AI 助手">🤖 AI</button>
                 </div>
 
                 {/* ── AI 面板 ── */}
                 {aiOpen && (
-                    <div className="absolute top-12 right-3 z-10 bg-white rounded-lg shadow-xl border border-gray-200 p-3 w-80">
+                    <div className="absolute top-12 right-3 z-50 bg-white rounded-lg shadow-xl border border-gray-200 p-3 w-80"
+                         onMouseDown={e => e.stopPropagation()} onPointerDown={e => e.stopPropagation()}>
                         {!aiConfig ? (
                             <div className="space-y-2">
                                 <div className="text-xs font-semibold text-gray-700">配置 AI 接口</div>
                                 <input placeholder="API Endpoint (OpenAI兼容)" className="w-full border rounded px-2 py-1 text-xs"
+                                    onMouseDown={e => e.stopPropagation()}
                                     onChange={e => setAiConfig(c => ({ ...(c || { endpoint: '', apiKey: '', model: 'gpt-4o-mini' }), endpoint: e.target.value }))} />
                                 <input placeholder="API Key" type="password" className="w-full border rounded px-2 py-1 text-xs"
+                                    onMouseDown={e => e.stopPropagation()}
                                     onChange={e => setAiConfig(c => ({ ...(c || { endpoint: '', apiKey: '', model: 'gpt-4o-mini' }), apiKey: e.target.value }))} />
                                 <input placeholder="Model (如 gpt-4o-mini)" className="w-full border rounded px-2 py-1 text-xs"
+                                    onMouseDown={e => e.stopPropagation()}
                                     onChange={e => setAiConfig(c => ({ ...(c || { endpoint: '', apiKey: '', model: 'gpt-4o-mini' }), model: e.target.value }))} />
-                                <button onClick={() => { if (aiConfig) saveAIConfig(aiConfig); }}
+                                <button type="button" onMouseDown={e => e.stopPropagation()} onClick={() => { if (aiConfig) saveAIConfig(aiConfig); }}
                                     className="bg-purple-600 text-white text-xs px-3 py-1 rounded w-full">保存配置</button>
                             </div>
                         ) : (
@@ -479,11 +486,13 @@ setAppVersion(v => v + 1);
                                 <textarea
                                     value={aiPrompt}
                                     onChange={e => setAiPrompt(e.target.value)}
-                                    placeholder="描述你想搭的自动化，例如：随机点名，把名字用语音播报出来"
+                                    onMouseDown={e => e.stopPropagation()}
+                                    placeholder="描述你想搭的自动化..."
                                     className="w-full border rounded px-2 py-1 text-xs h-16 resize-none"
                                     onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) onAIGenerate(); }}
                                 />
-                                <button
+                                <button type="button"
+                                    onMouseDown={e => e.stopPropagation()}
                                     onClick={onAIGenerate}
                                     disabled={aiLoading}
                                     className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white text-xs px-3 py-1 rounded w-full"
