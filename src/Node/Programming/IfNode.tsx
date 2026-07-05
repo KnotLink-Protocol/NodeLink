@@ -1,10 +1,12 @@
 import NodeHeader from "../BaseNode/NodeHeader";
 import InputHandle from "../BaseNode/InputHandle";
+import { TriggerBar } from "../BaseNode/TriggerHandle";
 
 export default function IfNode() {
   return (
     <div className="relative w-40 bg-white border-gray-200 rounded-xl shadow-md font-sans">
       <NodeHeader title="If / Else" className="bg-red-500" />
+      <TriggerBar />
       <div className="divide-y divide-gray-100 text-[10px]">
         <div className="flex items-center justify-between px-3 py-2 relative">
           <InputHandle id="i-condition" className="!bg-red-500" />

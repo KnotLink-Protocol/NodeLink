@@ -1,6 +1,7 @@
 import NodeHeader from "../BaseNode/NodeHeader";
 import InputHandle from "../BaseNode/InputHandle";
 import OutputHandle from "../BaseNode/OutputHandle";
+import { TriggerBar } from "../BaseNode/TriggerHandle";
 import { useReactFlow } from "@xyflow/react";
 import { useCallback } from "react";
 
@@ -24,6 +25,7 @@ export default function CompareNode({ id, data }: { id: string; data?: CompareNo
   return (
     <div className="relative w-32 bg-white border-gray-200 rounded-xl shadow-md font-sans">
       <NodeHeader title="比较" className="bg-rose-500" />
+      <TriggerBar />
       <OutputHandle id="o-compare" tip="bool" className="!bg-rose-500" />
       <div className="divide-y divide-gray-100 text-[10px]">
         <div className="flex items-center justify-between px-3 py-2 relative">

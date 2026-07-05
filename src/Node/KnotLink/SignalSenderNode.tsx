@@ -1,5 +1,6 @@
 import NodeHeader from "../BaseNode/NodeHeader";
 import InputHandle from "../BaseNode/InputHandle";
+import { TriggerInput, TriggerOutput } from "../BaseNode/TriggerHandle";
 import { useReactFlow } from "@xyflow/react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -29,6 +30,7 @@ export default function SignalSenderNode({ id, data }: { id: string; data?: Sign
   return (
     <div className="relative w-44 bg-white border-gray-200 rounded-xl shadow-md font-sans">
       <NodeHeader title="信号发送" className="bg-yellow-500" />
+      <TriggerBar />
       <div className="divide-y divide-gray-100 text-[10px]">
         <div className="flex items-center justify-between px-3 py-2">
           <span className="text-gray-700">APP ID</span>

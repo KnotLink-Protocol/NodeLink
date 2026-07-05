@@ -3,6 +3,7 @@ import { useReactFlow } from "@xyflow/react";
 import NodeHeader from "../BaseNode/NodeHeader";
 import InputHandle from "../BaseNode/InputHandle";
 import OutputHandle from "../BaseNode/OutputHandle";
+import { TriggerBar } from "../BaseNode/TriggerHandle";
 import {
   findFunc,
   parseAllFuncLists,
@@ -68,6 +69,7 @@ export default function FuncNode({ id, data }: { id: string; data?: any }) {
     return (
       <div className="relative min-w-[120px] bg-white border-gray-200 rounded-xl shadow-md font-sans">
         <NodeHeader title={`📡 ${funcName}`} className={color} />
+        <TriggerBar input={false} />
         {Object.entries(sf.returns).map(([field, info]) => (
           <div key={field} className="px-3 py-1.5 border-t border-gray-100">
             <div className="flex items-center justify-between relative">
@@ -98,13 +100,7 @@ export default function FuncNode({ id, data }: { id: string; data?: any }) {
   return (
     <div className="relative min-w-[150px] bg-white border-gray-200 rounded-xl shadow-md font-sans">
       <NodeHeader title={funcName} className={color} />
-      {/* 如果没有 input 型参数，加一个触发口，用于被信号/其他节点触发 */}
-      {!hasInputArg && (
-        <div className="flex items-center px-3 py-1 relative border-b border-gray-100">
-          <InputHandle id="i-trigger" className="!bg-gray-400" />
-          <span className="text-gray-400 text-[9px] ml-2">触发</span>
-        </div>
-      )}
+      <TriggerBar />
       <div className="divide-y divide-gray-100 text-[10px]">
         {Object.entries(ocf.args).map(([argName, arg]) => {
           if (arg.type === "static") return null; // 不显示

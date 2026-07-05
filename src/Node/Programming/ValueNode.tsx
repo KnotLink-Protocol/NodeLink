@@ -1,6 +1,7 @@
 import NodeHeader from "../BaseNode/NodeHeader";
 import InputHandle from "../BaseNode/InputHandle";
 import OutputHandle from "../BaseNode/OutputHandle";
+import { TriggerBar } from "../BaseNode/TriggerHandle";
 import { useReactFlow } from "@xyflow/react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -40,10 +41,7 @@ export default function ValueNode({ id, data }: { id: string; data?: ValueNodeDa
   return (
     <div className="relative w-36 bg-white border-gray-200 rounded-xl shadow-md font-sans">
       <NodeHeader title="Value" className="bg-emerald-500" />
-      <div className="flex items-center px-3 py-1 relative border-b border-gray-100">
-        <InputHandle id="i-trigger" className="!bg-gray-400" />
-        <span className="text-gray-400 text-[9px] ml-2">触发</span>
-      </div>
+      <TriggerBar />
       <OutputHandle id="o-value" tip="val" className="!bg-emerald-500" />
       <div className="divide-y divide-gray-100 text-[10px]">
         <div className="flex items-center justify-between px-3 py-2">

@@ -1,5 +1,6 @@
 import NodeHeader from "../BaseNode/NodeHeader";
 import OutputHandle from "../BaseNode/OutputHandle";
+import { TriggerBar } from "../BaseNode/TriggerHandle";
 import { useReactFlow } from "@xyflow/react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -29,6 +30,7 @@ export default function SignalSubscriberNode({ id, data }: { id: string; data?: 
   return (
     <div className="relative w-44 bg-white border-gray-200 rounded-xl shadow-md font-sans">
       <NodeHeader title="信号订阅" className="bg-lime-500" />
+      <TriggerBar input={false} />
       <OutputHandle id="o-data" tip="data" className="!bg-lime-500" />
       <div className="divide-y divide-gray-100 text-[10px]">
         <div className="flex items-center justify-between px-3 py-2">

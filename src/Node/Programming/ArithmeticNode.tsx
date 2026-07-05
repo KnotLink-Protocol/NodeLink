@@ -1,6 +1,7 @@
 import NodeHeader from "../BaseNode/NodeHeader";
 import InputHandle from "../BaseNode/InputHandle";
 import OutputHandle from "../BaseNode/OutputHandle";
+import { TriggerBar } from "../BaseNode/TriggerHandle";
 import { useReactFlow } from "@xyflow/react";
 import { useCallback } from "react";
 
@@ -24,6 +25,7 @@ export default function ArithmeticNode({ id, data }: { id: string; data?: Arithm
   return (
     <div className="relative w-32 bg-white border-gray-200 rounded-xl shadow-md font-sans">
       <NodeHeader title="运算" className="bg-amber-500" />
+      <TriggerBar />
       <OutputHandle id="o-result" tip="res" className="!bg-amber-500" />
       <div className="divide-y divide-gray-100 text-[10px]">
         <div className="flex items-center justify-between px-3 py-2 relative">

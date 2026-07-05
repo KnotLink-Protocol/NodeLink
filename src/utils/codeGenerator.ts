@@ -61,9 +61,10 @@ function topologicalSort(nodes: Node[], edges: Edge[]): Node[] {
 }
 
 // ── 判断被动源节点（无输入边 + 订阅/信号类型）───────────────────
-function isPassiveSource(allApps: AppDefinition[], nodeType: string | undefined, nodeId: string, edges: Edge[]): boolean {
-  const hasInput = edges.some((e) => e.target === nodeId);
-  if (hasInput) return false;
+function isPassiveSource(allApps: AppDefinition[], nodeType: string | undefined, nodeId: string, triggerEdges: Edge[]): boolean {
+  // 只检查触发边：有触发输入就不是被动源
+  const hasTriggerInput = triggerEdges.some((e) => e.target === nodeId);
+  if (hasTriggerInput) return false;
   if (!nodeType) return false;
   if (nodeType === "SignalSubscriberNode") return true;
   if (nodeType === "OpenSocketResponserNode") return true;
@@ -75,6 +76,20 @@ function isPassiveSource(allApps: AppDefinition[], nodeType: string | undefined,
     }
   }
   return false;
+}
+
+// 分离触发边和数据边
+function splitEdges(edges: Edge[]): { triggerEdges: Edge[]; dataEdges: Edge[] } {
+  const triggerEdges: Edge[] = [];
+  const dataEdges: Edge[] = [];
+  for (const e of edges) {
+    if (e.type === 'triggerEdge' || e.targetHandle === 'i-trigger') {
+      triggerEdges.push(e);
+    } else {
+      dataEdges.push(e);
+    }
+  }
+  return { triggerEdges, dataEdges };
 }
 
 // ── BFS 下游 ──
@@ -360,16 +375,17 @@ export function generatePython(nodes: Node[], edges: Edge[]): string {
   const allApps = parseAllFuncLists();
   const progNodeIds = new Set(progNodes.map((n) => n.id));
   const progEdges = edges.filter((e) => progNodeIds.has(e.source) && progNodeIds.has(e.target));
+  const { triggerEdges } = splitEdges(progEdges);
 
-  // ── 阶段 1: 分类 ──
+  // ── 阶段 1: 分类（只用触发边判断顺序）──
   const passiveSources: Node[] = [];
   const passiveDown = new Map<string, Set<string>>();
   const ctx = new Map<string, string | null>();
 
   for (const n of progNodes) {
-    if (isPassiveSource(allApps, n.type, n.id, progEdges)) {
+    if (isPassiveSource(allApps, n.type, n.id, triggerEdges)) {
       passiveSources.push(n);
-      const ds = getDownstream(n.id, progNodes, progEdges);
+      const ds = getDownstream(n.id, progNodes, triggerEdges);
       passiveDown.set(n.id, ds);
       ctx.set(n.id, n.id);
       for (const d of ds) ctx.set(d, n.id);
@@ -384,7 +400,7 @@ export function generatePython(nodes: Node[], edges: Edge[]): string {
   const needs: Needs = { klkv: false, querier: false, subscriber: false, sender: false };
   function emit(s: string) { lines.push("    ".repeat(ind.v) + s); }
 
-  const sorted = topologicalSort(progNodes, progEdges);
+  const sorted = topologicalSort(progNodes, triggerEdges);
 
   // ── 阶段 2: 顶层节点 ──
   let topLines = 0;

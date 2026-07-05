@@ -19,6 +19,7 @@ import Vector1Node from '../Input/Vector1Node';
 import OutputNode from '../Output/OutputNode';
 import {NumberOutputNode} from '../Output/NumberOutputNode';
 import { EdgeWithButton } from '../Edge/EdgeWithButton';
+import { TriggerEdge } from '../Edge/TriggerEdge';
 import ValueNode from '../Programming/ValueNode';
 import PrintNode from '../Programming/PrintNode';
 import ArithmeticNode from '../Programming/ArithmeticNode';
@@ -44,6 +45,7 @@ const edgeOptions = {
 };
 const edgeTypes: EdgeTypes = {
     edgeButton: EdgeWithButton,
+    triggerEdge: TriggerEdge,
 };
 
 // ── 解析 funcList 动态生成 nodeTypes ──
@@ -108,9 +110,29 @@ export default function NodeGraph() {
     );
 
     const onConnect = useCallback(
-        (params: any) => setEdges((es) => addEdge(params, es)),
+        (params: any) => {
+            // 触发口 → 自动标记为触发边
+            const isTrigger = params.targetHandle === 'i-trigger';
+            const edge = {
+                ...params,
+                type: isTrigger ? 'triggerEdge' : 'edgeButton',
+                animated: !isTrigger,
+            };
+            setEdges((es) => addEdge(edge, es));
+        },
         [],
     );
+
+    // 连线校验：只允许 output→input 或 output→trigger
+    const isValidConnection = useCallback((conn: any) => {
+        // 不能自己连自己
+        if (conn.source === conn.target) return false;
+        // 触发口只能接受任意输出
+        if (conn.targetHandle === 'i-trigger') return true;
+        // input 型参数口不能接受 trigger 输出（trigger 是执行流，不传数据）
+        // 注：ReactFlow 已经阻止 source/target 同向连接
+        return true;
+    }, []);
     const onReconnectStart = useCallback(() => {
         edgeReconnectSuccessful.current = false;
     }, []);
@@ -372,6 +394,7 @@ setAppVersion(v => v + 1);
                         onReconnectStart={onReconnectStart}
                         onReconnectEnd={onReconnectEnd}
                         onConnect={onConnect}
+                        isValidConnection={isValidConnection}
                         onInit={setReactFlowInstance}
                         onDrop={onDrop}
                         onDragOver={onDragOver}

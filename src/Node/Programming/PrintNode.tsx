@@ -1,5 +1,6 @@
 import NodeHeader from "../BaseNode/NodeHeader";
 import InputHandle from "../BaseNode/InputHandle";
+import { TriggerBar } from "../BaseNode/TriggerHandle";
 import { useNodeConnections, useNodesData } from "@xyflow/react";
 import { useState } from "react";
 
@@ -11,6 +12,7 @@ export default function PrintNode() {
   return (
     <div className="relative w-44 bg-white border-gray-200 rounded-xl shadow-md font-sans">
       <NodeHeader title="Print" className="bg-cyan-500" />
+      <TriggerBar />
       <div className="flex items-center px-3 py-2 relative">
         <InputHandle id="i-print" className="!bg-cyan-500" />
         <span className="text-gray-700 text-[10px] ml-2">输出</span>

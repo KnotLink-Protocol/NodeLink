@@ -1,6 +1,7 @@
 import NodeHeader from "../BaseNode/NodeHeader";
 import InputHandle from "../BaseNode/InputHandle";
 import OutputHandle from "../BaseNode/OutputHandle";
+import { TriggerBar } from "../BaseNode/TriggerHandle";
 import { useReactFlow } from "@xyflow/react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -30,6 +31,7 @@ export default function OpenSocketResponserNode({ id, data }: { id: string; data
   return (
     <div className="relative w-44 bg-white border-gray-200 rounded-xl shadow-md font-sans">
       <NodeHeader title="Socket响应" className="bg-sky-500" />
+      <TriggerBar input={false} />
       <OutputHandle id="o-reply" tip="回复" className="!bg-sky-500" />
       <div className="divide-y divide-gray-100 text-[10px]">
         <div className="flex items-center justify-between px-3 py-2">
