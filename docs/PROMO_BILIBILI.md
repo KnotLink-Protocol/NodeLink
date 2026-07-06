@@ -30,8 +30,6 @@ NodeLink 界面——浅色画布，左侧功能面板，右侧工具栏
 
 每个节点都是一个带颜色的卡片。顶部有一条**触发栏**——左边是灰色的触发输入口，右边是橙色的触发输出口。标题栏下方才是数据口：输入在左，输出在右。
 
-> 📸 **截图 3**：节点特写，标注触发栏（灰入/橙出）和数据口的位置
-
 ### 两种连线
 
 NodeLink 最近做了一个重要更新：**把触发流和数据流分开了**。
@@ -89,13 +87,69 @@ exe 旁边的 funclist 目录，每个文件夹是一个 App
 
 ---
 
+## 安装与配置
+
+### 下载与安装
+
+从 GitHub Releases 下载 `NodeLink_0.1.0_x64-setup.exe`，双击安装。或者下载便携版压缩包，解压即用。
+
+安装完成后，`.kln` 文件会自动关联 NodeLink。双击 `.kln` 工程文件即可打开，也支持直接拖到 `NodeLink.exe` 图标上。
+
+> 如果 `.kln` 没有自动关联，右键 `register-kln.bat` → 以管理员身份运行。
+
+### 导入功能包（funclist）
+
+NodeLink 的功能节点来自 exe 旁边的 `funclist` 文件夹。
+
+> 📸 **截图**：funclist 目录结构
+
+```
+NodeLink.exe
+└── funclist/
+    ├── NamePicker/
+    │   └── FuncList.json
+    ├── MultiTTS_Client/
+    │   └── FuncList.json
+    └── ...
+```
+
+每个文件夹是一个 App，里面放一个 `FuncList.json`。新增软件时把它丢进去，重启 NodeLink，新节点自动出现。
+
+也可以用 📦 加载功能包 按钮手动导入 `.json` 文件，无需重启。
+
+### 配置 AI 助手
+
+两种方式：
+
+**方式一：配置文件（推荐）**
+
+在 exe 旁边新建 `ai-config.json`：
+
+```json
+{
+  "endpoint": "https://api.deepseek.com/chat/completions",
+  "apiKey": "sk-你的API密钥",
+  "model": "deepseek-chat"
+}
+```
+
+启动 NodeLink 后自动读取，点 🤖 就能用。
+
+**方式二：界面配置**
+
+点 🤖 AI 按钮 → 首次会弹出配置面板 → 填入 Endpoint、API Key、Model → 保存。
+
+支持所有 OpenAI 兼容接口：DeepSeek、OpenAI、OpenRouter、本地 Ollama 等。
+
+---
+
 ## 使用示例
 
 ### 示例一：点名 + 语音播报
 
 **目标**：随机点名一个学生，电脑自动念出名字。
 
-> 🤖 **AI 提示词**：随机点名触发后，把名字用语音播报出来
+> 🤖 **AI 提示词**：随机点名触发后，弹出消息提醒窗口显示名字，在这之后把名字用语音播报出来
 
 **手动搭建**：
 
