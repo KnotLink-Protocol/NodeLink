@@ -75,13 +75,17 @@ AI 支持任何 OpenAI 兼容接口——DeepSeek、OpenAI、OpenRouter、本地
 
 你可能会好奇：两个软件怎么知道对方要什么数据？
 
-秘密在于 KnotLink 协议。每个支持这个协议的软件都自带一份 FuncList.json 文件，里面写明了：我能做什么、需要什么参数、返回什么结果。NodeLink 启动时自动读取 exe 目录下 funclist 文件夹里的所有 FuncList.json，把它们变成可拖拽的节点。
+秘密在于 KnotLink 协议。每个支持这个协议的软件，在其根目录下都放置了一份 `FuncList.json` 文件。这份文件就是软件的"能力清单"——我有什么功能、接受什么参数、返回什么结果。
+
+拿到一款 KnotLink 软件的 FuncList.json 后，把它放到 NodeLink 的 `funclist` 文件夹里，重启，新节点就出现了。
 
 ![funclist 文件夹结构](screenshots/funclist-dir.png)
 
-exe 旁边的 funclist 目录，每个文件夹是一个 App
+每一款 KnotLink 软件的 FuncList.json 都可以在 **KnotLink 节点索引站** 浏览和下载。
 
-你新增一个软件？把它的 FuncList.json 放到 funclist 文件夹里，重启 NodeLink，新节点就出现了。不需要改代码，不需要更新软件。
+> 🌐 **节点索引**：[https://knotlink.cn/nodes](https://knotlink.cn/nodes) — 查看所有可用功能、搜索节点、下载 FuncList.json
+
+不需要改代码，不需要更新 NodeLink。社区贡献新的 funcList，你下载放进去就能用。
 
 编排好工作流后，NodeLink 按照拓扑顺序遍历画布上的节点，根据每个节点的类型（触发式还是请求式）生成对应的 Python 代码。触发式的节点和它们的下游会自动嵌套在回调函数里；请求式的节点按顺序生成。
 
