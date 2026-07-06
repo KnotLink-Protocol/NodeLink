@@ -157,13 +157,15 @@ NodeLink.exe
 
 ② 从 **MultiTTS** 拖出 `EdgeTTS` 节点。
 
-③ 连线：pick 的 `name` 输出口 → EdgeTTS 的 `text` 输入口。
+③ 连两条线：触发流 `o-trigger` → `i-trigger`（橙色虚线），数据流 `name` → `text`（灰色实线）。
+
+> 触发定顺序，数据传参数。
 
 ![连线](screenshots/demo1-step3.png)
 
 ④ 点击 **⚡ 生成 Python 代码**。
 
-完成。你什么都没写，一个自动化就搭好了。
+完成。
 
 ### 示例二：信号触发文件搜索
 
