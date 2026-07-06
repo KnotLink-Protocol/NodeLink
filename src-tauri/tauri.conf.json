@@ -27,6 +27,12 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "windows": {
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "installMode": "currentUser"
+      }
+    },
     "resources": {
       "../scripts/install.bat": "install.bat",
       "../scripts/register-kln.bat": "register-kln.bat",
