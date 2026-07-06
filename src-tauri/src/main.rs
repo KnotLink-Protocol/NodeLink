@@ -3,5 +3,5 @@
 
 fn main() {
   let args: Vec<String> = std::env::args().skip(1).collect();
-  app_lib::run(args);
+  NodeLink_lib::run(args);
 }
